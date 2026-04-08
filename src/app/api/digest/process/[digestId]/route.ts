@@ -150,6 +150,7 @@ export async function POST(
           body_preview: originalEmail?.body?.slice(0, 4000),
           token_estimate: result.tokenEstimate,
           urgency: result.urgency,
+          category: result.category,
           ai_summary: result.summary,
           suggested_reply: result.suggestedReply,
         });

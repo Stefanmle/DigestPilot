@@ -13,15 +13,24 @@ export function classifyUrgencyPrompt(emails: EmailInput[]): string {
     )
     .join("\n---\n");
 
-  return `Classify the urgency of each email as "high", "medium", or "low".
+  return `Classify each email with TWO properties:
 
-High = needs a reply today, time-sensitive, from an important contact, or contains a direct question/request.
-Medium = should be replied to within a few days, contains useful information.
-Low = newsletters, notifications, FYI-only, no reply needed.
+1. "urgency": "high", "medium", or "low"
+   - high = needs a reply today, time-sensitive, direct question/request from a real person
+   - medium = should be replied to within a few days, useful information from a real person
+   - low = FYI-only, no reply needed
+
+2. "category": one of these values:
+   - "personal" = from a real person, needs attention or reply
+   - "work" = work-related from a colleague/client/partner
+   - "newsletter" = marketing emails, newsletters, subscriptions, digests
+   - "notification" = automated notifications (social media, apps, services)
+   - "spam" = probable spam, unsolicited, promotional junk
+   - "transactional" = receipts, confirmations, shipping updates
 
 Emails:
 ${emailList}
 
-Respond ONLY with a JSON object mapping email IDs to urgency levels. Example:
-{"msg123": "high", "msg456": "low"}`;
+Respond ONLY with a JSON object mapping email IDs to objects. Example:
+{"msg123": {"urgency": "high", "category": "work"}, "msg456": {"urgency": "low", "category": "newsletter"}}`;
 }
