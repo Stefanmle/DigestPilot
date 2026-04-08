@@ -99,10 +99,14 @@ export async function fetchNewEmails(
         ) ?? [];
     } catch (err: any) {
       if (err?.code === 404) {
-        // History expired, do a full sync
+        // History expired, do a full sync of today's emails
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const afterDate = Math.floor(today.getTime() / 1000);
         const list = await gmail.users.messages.list({
           userId: "me",
           labelIds: ["INBOX"],
+          q: `after:${afterDate}`,
           maxResults,
         });
         messageIds = list.data.messages?.map((m) => m.id ?? "") ?? [];
@@ -111,13 +115,21 @@ export async function fetchNewEmails(
       }
     }
   } else {
-    // First sync — get recent inbox messages
-    const list = await gmail.users.messages.list({
-      userId: "me",
-      labelIds: ["INBOX"],
-      maxResults,
-    });
-    messageIds = list.data.messages?.map((m) => m.id ?? "") ?? [];
+    // First sync — try today, then expand to last 7 days, then 30 days
+    for (const daysBack of [0, 7, 30]) {
+      const since = new Date();
+      since.setDate(since.getDate() - daysBack);
+      since.setHours(0, 0, 0, 0);
+      const afterDate = Math.floor(since.getTime() / 1000);
+      const list = await gmail.users.messages.list({
+        userId: "me",
+        labelIds: ["INBOX"],
+        q: `after:${afterDate}`,
+        maxResults,
+      });
+      messageIds = list.data.messages?.map((m) => m.id ?? "") ?? [];
+      if (messageIds.length > 0) break;
+    }
   }
 
   // Deduplicate and limit

@@ -114,7 +114,7 @@ async function classifyEmails(
 
   const results: Record<string, { urgency: "low" | "medium" | "high"; category: string }> = {};
   try {
-    const parsed = JSON.parse(text);
+    const parsed = parseJsonResponse(text);
     for (const [id, val] of Object.entries(parsed)) {
       const v = val as any;
       results[id] = {
@@ -171,7 +171,7 @@ async function summarizeAndSuggestReplies(
   }> = [];
 
   try {
-    const parsed = JSON.parse(text);
+    const parsed = parseJsonResponse(text);
     for (const item of parsed) {
       const email = emails.find((e) => e.id === item.id);
       results.push({
@@ -197,6 +197,13 @@ async function summarizeAndSuggestReplies(
     inputTokens: response.usage.input_tokens,
     outputTokens: response.usage.output_tokens,
   };
+}
+
+function parseJsonResponse(text: string): any {
+  // Claude sometimes wraps JSON in ```json ... ``` blocks
+  const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const cleaned = jsonMatch ? jsonMatch[1].trim() : text.trim();
+  return JSON.parse(cleaned);
 }
 
 function createDynamicBatches<T extends EmailInput>(

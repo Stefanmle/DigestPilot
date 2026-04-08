@@ -85,7 +85,7 @@ export async function POST(
         const { messages, newSyncCursor } = await fetchNewEmails(
           oauth2Client,
           inbox.sync_cursor,
-          100
+          20 // Start with 20 for testing, increase to 100 for production
         );
 
         // Update sync cursor
