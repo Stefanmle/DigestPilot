@@ -16,24 +16,18 @@ interface DigestEmail {
   thread_id: string;
 }
 
-const categoryBadge: Record<string, { label: string; className: string }> = {
-  personal: { label: "Personal", className: "bg-blue-100 text-blue-700" },
-  work: { label: "Work", className: "bg-purple-100 text-purple-700" },
-  newsletter: { label: "Newsletter", className: "bg-gray-100 text-gray-600" },
-  notification: { label: "Notification", className: "bg-gray-100 text-gray-600" },
-  spam: { label: "Probable spam", className: "bg-red-100 text-red-600" },
-  transactional: { label: "Receipt/Confirmation", className: "bg-green-100 text-green-700" },
+const categoryConfig: Record<string, { label: string; className: string }> = {
+  personal: { label: "Personal", className: "bg-blue-50 text-blue-600 ring-1 ring-blue-200" },
+  work: { label: "Work", className: "bg-violet-50 text-violet-600 ring-1 ring-violet-200" },
+  newsletter: { label: "Newsletter", className: "bg-zinc-100 text-zinc-500 ring-1 ring-zinc-200" },
+  notification: { label: "Notification", className: "bg-zinc-100 text-zinc-500 ring-1 ring-zinc-200" },
+  spam: { label: "Spam", className: "bg-red-50 text-red-500 ring-1 ring-red-200" },
+  transactional: { label: "Receipt", className: "bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200" },
 };
 
 export function EmailCard({ email }: { email: DigestEmail }) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
-
-  const urgencyDot = {
-    high: "bg-red-500",
-    medium: "bg-yellow-500",
-    low: "bg-gray-400",
-  };
 
   const hasReply = email.suggested_reply && email.suggested_reply.length > 0;
   const isLowPriority = ["newsletter", "notification", "spam", "transactional"].includes(email.category ?? "");
@@ -44,7 +38,6 @@ export function EmailCard({ email }: { email: DigestEmail }) {
   const gmailWebUrl = hasReply
     ? `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(email.from_email ?? "")}&su=${encodeURIComponent(replySubject)}&body=${encodeURIComponent(replyBody)}`
     : null;
-
   const mailtoUrl = hasReply
     ? `mailto:${encodeURIComponent(email.from_email ?? "")}?subject=${encodeURIComponent(replySubject)}&body=${encodeURIComponent(replyBody)}`
     : null;
@@ -58,27 +51,26 @@ export function EmailCard({ email }: { email: DigestEmail }) {
   }
 
   return (
-    <Card className={isLowPriority ? "opacity-70" : ""}>
-      <CardContent className="p-4 space-y-3">
+    <Card className={`transition-opacity ${isLowPriority ? "opacity-60 hover:opacity-100" : ""}`}>
+      <CardContent className="p-4 space-y-2.5">
         {/* Header */}
         <div className="flex items-start gap-3">
-          <div
-            className={`mt-1.5 h-2.5 w-2.5 rounded-full shrink-0 ${urgencyDot[email.urgency ?? "low"]}`}
-          />
+          <div className={`mt-1 h-2.5 w-2.5 rounded-full shrink-0 ${
+            email.urgency === "high" ? "bg-red-500" :
+            email.urgency === "medium" ? "bg-amber-400" : "bg-zinc-300"
+          }`} />
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <p className="text-sm font-medium truncate">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-sm font-semibold truncate">
                 {email.from_name || email.from_email}
               </p>
-              {email.category && categoryBadge[email.category] && (
-                <span
-                  className={`text-[10px] px-1.5 py-0.5 rounded-full shrink-0 ${categoryBadge[email.category].className}`}
-                >
-                  {categoryBadge[email.category].label}
+              {email.category && categoryConfig[email.category] && (
+                <span className={`text-[10px] leading-none px-1.5 py-0.5 rounded-full font-medium ${categoryConfig[email.category].className}`}>
+                  {categoryConfig[email.category].label}
                 </span>
               )}
             </div>
-            <p className="text-sm text-muted-foreground truncate">
+            <p className="text-[13px] text-muted-foreground truncate mt-0.5">
               {email.subject}
             </p>
           </div>
@@ -86,59 +78,46 @@ export function EmailCard({ email }: { email: DigestEmail }) {
 
         {/* AI Summary */}
         {email.ai_summary && (
-          <p className="text-sm text-muted-foreground leading-relaxed">
+          <p className="text-[13px] text-foreground/80 leading-relaxed pl-5">
             {email.ai_summary}
           </p>
         )}
 
-        {/* Suggested Reply (expandable) — only for emails that need replies */}
+        {/* Suggested Reply */}
         {hasReply && (
-          <>
+          <div className="pl-5">
             <button
               type="button"
-              className="text-sm text-primary hover:underline"
+              className="text-[13px] font-medium text-primary hover:text-primary/80 transition-colors"
               onClick={() => setExpanded(!expanded)}
             >
-              {expanded ? "Hide reply" : "Show suggested reply"}
+              {expanded ? "Hide reply ↑" : "Show suggested reply ↓"}
             </button>
 
             {expanded && (
-              <div className="space-y-3">
-                <div className="rounded-md bg-muted p-3 text-sm">
+              <div className="mt-2.5 space-y-2.5">
+                <div className="rounded-lg bg-muted/70 p-3 text-[13px] leading-relaxed whitespace-pre-wrap">
                   {email.suggested_reply}
                 </div>
 
                 <div className="flex gap-2">
                   {mailtoUrl && (
-                    <a
-                      href={mailtoUrl}
-                      className="flex-1 inline-flex items-center justify-center rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-                    >
+                    <a href={mailtoUrl} className="flex-1 inline-flex items-center justify-center rounded-lg bg-primary px-3 py-2 text-[13px] font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
                       Reply in app
                     </a>
                   )}
                   {gmailWebUrl && (
-                    <a
-                      href={gmailWebUrl}
-                      target="_blank"
-                      rel="noopener"
-                      className="flex-1 inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium hover:bg-accent"
-                    >
+                    <a href={gmailWebUrl} target="_blank" rel="noopener" className="flex-1 inline-flex items-center justify-center rounded-lg border border-input bg-background px-3 py-2 text-[13px] font-medium hover:bg-accent transition-colors">
                       Reply in web
                     </a>
                   )}
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="shrink-0"
-                    onClick={copyReply}
-                  >
+                  <Button size="sm" variant="ghost" className="shrink-0 text-[13px]" onClick={copyReply}>
                     {copied ? "Copied!" : "Copy"}
                   </Button>
                 </div>
               </div>
             )}
-          </>
+          </div>
         )}
       </CardContent>
     </Card>
