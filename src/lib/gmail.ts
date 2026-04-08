@@ -135,6 +135,8 @@ export async function fetchNewEmails(
   // Deduplicate and limit
   messageIds = [...new Set(messageIds.filter(Boolean))].slice(0, maxResults);
 
+  // We'll filter out DigestPilot's own emails after fetching (by sender)
+
   // Fetch full messages
   const messages: GmailMessage[] = [];
   for (const msgId of messageIds) {
@@ -173,7 +175,15 @@ export async function fetchNewEmails(
     }
   }
 
-  return { messages, newSyncCursor };
+  // Filter out DigestPilot's own emails
+  const filtered = messages.filter(
+    (m) =>
+      !m.fromEmail.includes("resend.dev") &&
+      !m.fromEmail.includes("digestpilot.com") &&
+      !m.from.toLowerCase().includes("digestpilot")
+  );
+
+  return { messages: filtered, newSyncCursor };
 }
 
 export async function fetchSentEmails(
