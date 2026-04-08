@@ -36,8 +36,13 @@ export async function sendDigestEmail(
   const emailCards = sorted
     .map((email) => {
       const dot = urgencyDot[email.urgency ?? "low"];
-      const replyUrl = email.suggested_reply
-        ? `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(email.from_email ?? "")}&su=${encodeURIComponent(`Re: ${email.subject ?? ""}`)}&body=${encodeURIComponent(email.suggested_reply.slice(0, 1500))}`
+      const replySubject = `Re: ${email.subject ?? ""}`;
+      const replyBody = email.suggested_reply?.slice(0, 1500) ?? "";
+      const gmailWebUrl = email.suggested_reply
+        ? `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(email.from_email ?? "")}&su=${encodeURIComponent(replySubject)}&body=${encodeURIComponent(replyBody)}`
+        : null;
+      const mailtoUrl = email.suggested_reply
+        ? `mailto:${encodeURIComponent(email.from_email ?? "")}?subject=${encodeURIComponent(replySubject)}&body=${encodeURIComponent(replyBody)}`
         : null;
       const editUrl = `${appUrl}/dashboard/${email.id}`;
       const replyTooLong =
@@ -63,8 +68,13 @@ export async function sendDigestEmail(
         </div>
         <div style="margin-top: 10px;">
           ${
-            replyUrl && !replyTooLong
-              ? `<a href="${replyUrl}" style="display: inline-block; background: #111; color: #fff; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 500; margin-right: 8px;" target="_blank">Reply with this &rarr;</a>`
+            mailtoUrl && !replyTooLong
+              ? `<a href="${mailtoUrl}" style="display: inline-block; background: #111; color: #fff; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 500; margin-right: 8px;">Reply in app &rarr;</a>`
+              : ""
+          }
+          ${
+            gmailWebUrl && !replyTooLong
+              ? `<a href="${gmailWebUrl}" style="display: inline-block; background: #fff; color: #111; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 500; border: 1px solid #d1d5db; margin-right: 8px;" target="_blank">Reply in web &rarr;</a>`
               : ""
           }
           <a href="${editUrl}" style="display: inline-block; background: #fff; color: #111; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 500; border: 1px solid #d1d5db;" target="_blank">Edit &amp; reply &rarr;</a>
@@ -106,7 +116,7 @@ export async function sendDigestEmail(
     .join("\n---\n");
 
   await resend.emails.send({
-    from: "DigestPilot <digest@digestpilot.com>",
+    from: "DigestPilot <onboarding@resend.dev>",
     to,
     subject: `DigestPilot: ${emails.length} new message${emails.length !== 1 ? "s" : ""}${urgentCount > 0 ? ` (${urgentCount} urgent)` : ""}`,
     html,

@@ -38,8 +38,15 @@ export function EmailCard({ email }: { email: DigestEmail }) {
   const hasReply = email.suggested_reply && email.suggested_reply.length > 0;
   const isLowPriority = ["newsletter", "notification", "spam", "transactional"].includes(email.category ?? "");
 
-  const gmailComposeUrl = hasReply
-    ? `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(email.from_email ?? "")}&su=${encodeURIComponent(`Re: ${email.subject ?? ""}`)}&body=${encodeURIComponent(email.suggested_reply!.slice(0, 1500))}`
+  const replySubject = `Re: ${email.subject ?? ""}`;
+  const replyBody = email.suggested_reply?.slice(0, 1500) ?? "";
+
+  const gmailWebUrl = hasReply
+    ? `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(email.from_email ?? "")}&su=${encodeURIComponent(replySubject)}&body=${encodeURIComponent(replyBody)}`
+    : null;
+
+  const mailtoUrl = hasReply
+    ? `mailto:${encodeURIComponent(email.from_email ?? "")}?subject=${encodeURIComponent(replySubject)}&body=${encodeURIComponent(replyBody)}`
     : null;
 
   async function copyReply() {
@@ -102,23 +109,31 @@ export function EmailCard({ email }: { email: DigestEmail }) {
                 </div>
 
                 <div className="flex gap-2">
-                  {gmailComposeUrl && (
+                  {mailtoUrl && (
                     <a
-                      href={gmailComposeUrl}
-                      target="_blank"
-                      rel="noopener"
+                      href={mailtoUrl}
                       className="flex-1 inline-flex items-center justify-center rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
                     >
-                      Reply with this
+                      Reply in app
+                    </a>
+                  )}
+                  {gmailWebUrl && (
+                    <a
+                      href={gmailWebUrl}
+                      target="_blank"
+                      rel="noopener"
+                      className="flex-1 inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium hover:bg-accent"
+                    >
+                      Reply in web
                     </a>
                   )}
                   <Button
                     size="sm"
-                    variant="outline"
-                    className="flex-1"
+                    variant="ghost"
+                    className="shrink-0"
                     onClick={copyReply}
                   >
-                    {copied ? "Copied!" : "Copy reply"}
+                    {copied ? "Copied!" : "Copy"}
                   </Button>
                 </div>
               </div>

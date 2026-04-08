@@ -23,7 +23,9 @@ export function EmailDetailContent({ email }: { email: DigestEmail }) {
   const [replyText, setReplyText] = useState(email.suggested_reply ?? "");
   const [copied, setCopied] = useState(false);
 
-  const gmailComposeUrl = `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(email.from_email ?? "")}&su=${encodeURIComponent(`Re: ${email.subject ?? ""}`)}&body=${encodeURIComponent(replyText.slice(0, 1500))}`;
+  const replySubject = `Re: ${email.subject ?? ""}`;
+  const gmailWebUrl = `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(email.from_email ?? "")}&su=${encodeURIComponent(replySubject)}&body=${encodeURIComponent(replyText.slice(0, 1500))}`;
+  const mailtoUrl = `mailto:${encodeURIComponent(email.from_email ?? "")}?subject=${encodeURIComponent(replySubject)}&body=${encodeURIComponent(replyText.slice(0, 1500))}`;
 
   async function copyReply() {
     await navigator.clipboard.writeText(replyText);
@@ -94,17 +96,23 @@ export function EmailDetailContent({ email }: { email: DigestEmail }) {
             )}
 
             <div className="flex gap-2">
-              <Button className="flex-1" onClick={copyReply}>
-                {copied ? "Copied!" : "Copy reply"}
-              </Button>
               <a
-                href={gmailComposeUrl}
+                href={mailtoUrl}
+                className="flex-1 inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              >
+                Reply in app
+              </a>
+              <a
+                href={gmailWebUrl}
                 target="_blank"
                 rel="noopener"
-                className="flex-1 inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+                className="flex-1 inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent"
               >
-                Open in Gmail
+                Reply in web
               </a>
+              <Button variant="ghost" className="shrink-0" onClick={copyReply}>
+                {copied ? "Copied!" : "Copy"}
+              </Button>
             </div>
           </CardContent>
         </Card>
