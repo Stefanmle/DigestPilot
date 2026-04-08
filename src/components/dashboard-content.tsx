@@ -20,27 +20,87 @@ export function DashboardContent({
   digestEmails,
 }: DashboardContentProps) {
   const [digestingNow, setDigestingNow] = useState(false);
+  const [digestStatus, setDigestStatus] = useState<string | null>(null);
   const [selectedDigestIndex, setSelectedDigestIndex] = useState(0);
+  const [currentDigests, setCurrentDigests] = useState(digests);
+  const [currentEmails, setCurrentEmails] = useState(digestEmails);
   const router = useRouter();
   const supabase = createBrowserClient();
 
-  const latestDigest = digests[selectedDigestIndex];
+  const latestDigest = currentDigests[selectedDigestIndex];
 
   async function handleDigestNow() {
     setDigestingNow(true);
+    setDigestStatus("Connecting to your inbox...");
     try {
-      const res = await fetch("/api/digests/now", { method: "POST" });
-      if (res.ok) {
-        // Poll for completion
-        const checkInterval = setInterval(async () => {
-          router.refresh();
-        }, 3000);
-        setTimeout(() => clearInterval(checkInterval), 60000);
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/digests/now", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setDigestStatus(data.error ?? "Something went wrong");
+        setTimeout(() => { setDigestingNow(false); setDigestStatus(null); }, 3000);
+        return;
       }
+
+      const { digestId } = await res.json();
+      setDigestStatus("Fetching your emails...");
+
+      // Poll for completion
+      const pollInterval = setInterval(async () => {
+        const { data: digest } = await supabase
+          .from("digests")
+          .select("*")
+          .eq("id", digestId)
+          .single();
+
+        if (digest?.status === "processing") {
+          setDigestStatus("Summarizing with AI... This may take a moment.");
+        } else if (digest?.status === "completed") {
+          clearInterval(pollInterval);
+          setDigestStatus(null);
+          setDigestingNow(false);
+
+          // Reload digest data
+          const { data: newDigests } = await supabase
+            .from("digests")
+            .select("*")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false })
+            .limit(10);
+          setCurrentDigests(newDigests ?? []);
+          setSelectedDigestIndex(0);
+
+          if (newDigests?.[0]) {
+            const { data: emails } = await supabase
+              .from("digest_emails")
+              .select("*")
+              .eq("digest_id", newDigests[0].id)
+              .order("urgency", { ascending: true });
+            setCurrentEmails(emails ?? []);
+          }
+        } else if (digest?.status === "failed") {
+          clearInterval(pollInterval);
+          setDigestStatus("Digest failed: " + (digest.error_message ?? "Unknown error"));
+          setTimeout(() => { setDigestingNow(false); setDigestStatus(null); }, 5000);
+        }
+      }, 2000);
+
+      // Safety timeout
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        if (digestingNow) {
+          setDigestStatus(null);
+          setDigestingNow(false);
+        }
+      }, 120000);
     } catch {
-      // ignore
-    } finally {
-      setTimeout(() => setDigestingNow(false), 5000);
+      setDigestStatus("Something went wrong. Try again.");
+      setTimeout(() => { setDigestingNow(false); setDigestStatus(null); }, 3000);
     }
   }
 
@@ -50,7 +110,7 @@ export function DashboardContent({
   }
 
   const urgencyOrder = { high: 0, medium: 1, low: 2 };
-  const sortedEmails = [...digestEmails].sort(
+  const sortedEmails = [...currentEmails].sort(
     (a, b) =>
       (urgencyOrder[a.urgency as keyof typeof urgencyOrder] ?? 2) -
       (urgencyOrder[b.urgency as keyof typeof urgencyOrder] ?? 2)
@@ -106,16 +166,18 @@ export function DashboardContent({
         ) : (
           <Card>
             <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground">
-                No digests yet. Connect your inbox and set up a schedule to get
-                started.
-              </p>
-              <Button
-                className="mt-4"
-                onClick={() => router.push("/onboarding")}
-              >
-                Get started
-              </Button>
+              {digestingNow ? (
+                <>
+                  <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+                  <p className="text-sm font-medium">{digestStatus ?? "Processing..."}</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-muted-foreground">
+                    No digests yet. Tap "Digest now" to generate your first one.
+                  </p>
+                </>
+              )}
             </CardContent>
           </Card>
         )}
@@ -130,13 +192,13 @@ export function DashboardContent({
         )}
 
         {/* Digest history */}
-        {digests.length > 1 && (
+        {currentDigests.length > 1 && (
           <div className="space-y-2">
             <h2 className="text-sm font-medium text-muted-foreground">
               Past digests
             </h2>
             <div className="flex gap-2 overflow-x-auto pb-2">
-              {digests.map((d, i) => (
+              {currentDigests.map((d, i) => (
                 <Button
                   key={d.id}
                   size="sm"

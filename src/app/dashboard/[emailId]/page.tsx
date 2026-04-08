@@ -1,28 +1,44 @@
-import { createServerClient } from "@/lib/supabase-server";
-import { redirect } from "next/navigation";
+"use client";
+
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { createBrowserClient } from "@/lib/supabase";
 import { EmailDetailContent } from "@/components/email-detail-content";
 
-export default async function EmailDetailPage({
-  params,
-}: {
-  params: Promise<{ emailId: string }>;
-}) {
-  const { emailId } = await params;
-  const supabase = await createServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+export default function EmailDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const [email, setEmail] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  if (!user) redirect("/");
+  useEffect(() => {
+    loadEmail();
+  }, []);
 
-  const { data: email } = await supabase
-    .from("digest_emails")
-    .select("*")
-    .eq("id", emailId)
-    .eq("user_id", user.id)
-    .single();
+  async function loadEmail() {
+    const supabase = createBrowserClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { router.push("/"); return; }
 
-  if (!email) redirect("/dashboard");
+    const { data } = await supabase
+      .from("digest_emails")
+      .select("*")
+      .eq("id", params.emailId)
+      .eq("user_id", user.id)
+      .single();
+
+    if (!data) { router.push("/dashboard"); return; }
+    setEmail(data);
+    setLoading(false);
+  }
+
+  if (loading) {
+    return (
+      <div className="flex flex-1 items-center justify-center bg-background">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
 
   return <EmailDetailContent email={email} />;
 }

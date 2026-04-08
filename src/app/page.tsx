@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createBrowserClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,10 +15,28 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-
   function getSupabase() {
     return createBrowserClient();
   }
+
+  // Handle OAuth callback (tokens in URL hash) and check existing session
+  useEffect(() => {
+    const supabase = getSupabase();
+
+    // If there's a hash fragment with tokens, Supabase will auto-detect and set the session
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session) {
+        window.location.href = "/onboarding";
+      }
+    });
+
+    // Also check if already logged in
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        window.location.href = "/dashboard";
+      }
+    });
+  }, []);
 
   async function handleGoogleSignIn() {
     setLoading(true);
@@ -26,7 +44,7 @@ export default function LoginPage() {
     const { error } = await getSupabase().auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}`,
       },
     });
     if (error) {

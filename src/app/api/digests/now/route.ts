@@ -1,15 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabase-server";
 import { createAdminClient } from "@/lib/supabase";
 import { checkRateLimit, checkDailyAiCostCap } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
-  const supabase = await createServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Get user from Authorization header (Bearer token from client)
+  const authHeader = request.headers.get("authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-  if (!user) {
+  const token = authHeader.slice(7);
+  const supabase = createAdminClient();
+
+  // Verify the token and get user
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -36,8 +41,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Check for already processing digest (idempotency)
-  const adminClient = createAdminClient();
-  const { data: existing } = await adminClient
+  const { data: existing } = await supabase
     .from("digests")
     .select("id")
     .eq("user_id", user.id)
@@ -52,11 +56,11 @@ export async function POST(request: NextRequest) {
   }
 
   // Create a new on-demand digest
-  const { data: digest, error } = await adminClient
+  const { data: digest, error } = await supabase
     .from("digests")
     .insert({
       user_id: user.id,
-      schedule_id: null, // on-demand
+      schedule_id: null,
       status: "queued",
     })
     .select("id")

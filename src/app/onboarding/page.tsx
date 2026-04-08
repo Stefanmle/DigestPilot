@@ -161,7 +161,7 @@ function OnboardingContent() {
                 on your behalf.
               </p>
               <Button
-                className="w-full h-11"
+                className="w-full h-11 cursor-pointer"
                 onClick={handleConnectGmail}
                 disabled={loading}
               >

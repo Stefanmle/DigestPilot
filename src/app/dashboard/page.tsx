@@ -1,40 +1,69 @@
-import { createServerClient } from "@/lib/supabase-server";
-import { redirect } from "next/navigation";
+"use client";
+
+import { useState, useEffect } from "react";
+import { createBrowserClient } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 import { DashboardContent } from "@/components/dashboard-content";
 
-export default async function DashboardPage() {
-  const supabase = await createServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+export default function DashboardPage() {
+  const router = useRouter();
+  const [user, setUser] = useState<any>(null);
+  const [digests, setDigests] = useState<any[]>([]);
+  const [digestEmails, setDigestEmails] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  if (!user) redirect("/");
+  useEffect(() => {
+    loadData();
+  }, []);
 
-  // Fetch latest digest
-  const { data: digests } = await supabase
-    .from("digests")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(10);
+  async function loadData() {
+    const supabase = createBrowserClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
-  // Fetch emails for latest digest
-  const latestDigest = digests?.[0];
-  let digestEmails: any[] = [];
+    if (!user) {
+      router.push("/");
+      return;
+    }
+    setUser(user);
 
-  if (latestDigest) {
-    const { data } = await supabase
-      .from("digest_emails")
+    // Fetch latest digests
+    const { data: digestsData } = await supabase
+      .from("digests")
       .select("*")
-      .eq("digest_id", latestDigest.id)
-      .order("urgency", { ascending: true });
-    digestEmails = data ?? [];
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    setDigests(digestsData ?? []);
+
+    // Fetch emails for latest digest
+    const latestDigest = digestsData?.[0];
+    if (latestDigest) {
+      const { data: emailsData } = await supabase
+        .from("digest_emails")
+        .select("*")
+        .eq("digest_id", latestDigest.id)
+        .order("urgency", { ascending: true });
+      setDigestEmails(emailsData ?? []);
+    }
+
+    setLoading(false);
   }
+
+  if (loading) {
+    return (
+      <div className="flex flex-1 items-center justify-center bg-background">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!user) return null;
 
   return (
     <DashboardContent
       user={user}
-      digests={digests ?? []}
+      digests={digests}
       digestEmails={digestEmails}
     />
   );
