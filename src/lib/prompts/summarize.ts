@@ -54,13 +54,16 @@ ${noReplyEmailList}`;
 
   prompt += `
 
+IMPORTANT for replies: Format replies with proper paragraph breaks using \\n\\n between paragraphs. Include a greeting, body paragraph(s), and a sign-off on separate lines. Example format:
+"Hej Anna,\\n\\nTack för mailet! Jag tittar på det och återkommer senast torsdag.\\n\\nMed vänliga hälsningar"
+
 Respond ONLY with a JSON array. Each item must have:
 - "id" (email ID)
 - "summary" (string)
-- "reply" (string or null — null for newsletters/notifications/spam/transactional)
+- "reply" (string with \\n for line breaks, or null for newsletters/notifications/spam/transactional)
 
 Example:
-[{"id": "msg1", "summary": "Anna asks for budget sign-off.", "reply": "Hi Anna, I'll review and get back to you."}, {"id": "msg2", "summary": "Weekly newsletter from TechCrunch.", "reply": null}]`;
+[{"id": "msg1", "summary": "Anna asks for budget sign-off.", "reply": "Hi Anna,\\n\\nI'll review the numbers and get back to you by Thursday.\\n\\nBest regards"}, {"id": "msg2", "summary": "Weekly newsletter from TechCrunch.", "reply": null}]`;
 
   return prompt;
 }
