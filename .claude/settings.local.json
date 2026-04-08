@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(curl -sI -m 5 https://__TRACKED_VAR__)",
+      "Bash(gh auth:*)",
+      "Bash(npm --version)",
+      "Bash(gh repo:*)"
+    ]
+  }
+}

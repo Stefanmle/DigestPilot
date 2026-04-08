@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"source \\\"$HOME/.nvm/nvm.sh\\\" && nvm use 20 && npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias \\\"@/*\\\" --use-npm --no-turbopack 2>&1\",\"timeout\":...",
+  "error": "Exit code 1\nNow using node v20.20.2 (npm v10.8.2)\nCould not create a project called \"DigestPilot\" because of npm naming restrictions:\n    * name can no longer contain capital letters\n[rerun: b10]",
+  "timestamp": "2026-04-08T08:49:59.813Z",
+  "retry_count": 1
+}
