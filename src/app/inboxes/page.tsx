@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AppLayout } from "@/components/app-layout";
 
 export default function InboxesPage() {
   const router = useRouter();
@@ -49,17 +50,8 @@ export default function InboxesPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-full bg-background">
-      <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
-        <div className="flex items-center justify-between px-4 py-3 max-w-2xl mx-auto">
-          <h1 className="text-lg font-semibold">Inboxes</h1>
-          <Button size="sm" variant="ghost" onClick={() => router.push("/dashboard")}>
-            Back
-          </Button>
-        </div>
-      </header>
-
-      <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full space-y-4">
+    <AppLayout>
+      <div className="px-4 lg:px-8 py-6 max-w-3xl space-y-4">
         {inboxes.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
@@ -105,7 +97,7 @@ export default function InboxesPage() {
             </Button>
           </>
         )}
-      </main>
-    </div>
+      </div>
+    </AppLayout>
   );
 }

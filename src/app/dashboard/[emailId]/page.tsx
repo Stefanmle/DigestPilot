@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase";
+import { AppLayout } from "@/components/app-layout";
 import { EmailDetailContent } from "@/components/email-detail-content";
 
 export default function EmailDetailPage() {
@@ -40,5 +41,5 @@ export default function EmailDetailPage() {
     );
   }
 
-  return <EmailDetailContent email={email} />;
+  return <AppLayout><EmailDetailContent email={email} /></AppLayout>;
 }

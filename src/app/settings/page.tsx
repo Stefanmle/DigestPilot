@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AppLayout } from "@/components/app-layout";
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -72,15 +73,8 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-full bg-background">
-      <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
-        <div className="flex items-center justify-between px-4 py-3 max-w-2xl mx-auto">
-          <h1 className="text-lg font-semibold">Settings</h1>
-          <Button size="sm" variant="ghost" onClick={() => router.push("/dashboard")}>← Back</Button>
-        </div>
-      </header>
-
-      <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full space-y-5">
+    <AppLayout>
+      <div className="px-4 lg:px-8 py-6 max-w-3xl space-y-5">
         {/* Account */}
         <Card>
           <CardHeader className="pb-2">
@@ -164,10 +158,7 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        <Button variant="ghost" className="w-full text-muted-foreground" onClick={handleSignOut}>
-          Sign out
-        </Button>
-      </main>
-    </div>
+      </div>
+    </AppLayout>
   );
 }

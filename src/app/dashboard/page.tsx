@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { createBrowserClient } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { AppLayout } from "@/components/app-layout";
 import { DashboardContent } from "@/components/dashboard-content";
 
 export default function DashboardPage() {
@@ -12,59 +13,47 @@ export default function DashboardPage() {
   const [digestEmails, setDigestEmails] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
   async function loadData() {
     const supabase = createBrowserClient();
     const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      router.push("/");
-      return;
-    }
+    if (!user) { router.push("/"); return; }
     setUser(user);
 
-    // Fetch latest digests
     const { data: digestsData } = await supabase
-      .from("digests")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(10);
-
+      .from("digests").select("*").eq("user_id", user.id)
+      .order("created_at", { ascending: false }).limit(10);
     setDigests(digestsData ?? []);
 
-    // Fetch emails for latest digest
     const latestDigest = digestsData?.[0];
     if (latestDigest) {
       const { data: emailsData } = await supabase
-        .from("digest_emails")
-        .select("*")
-        .eq("digest_id", latestDigest.id)
+        .from("digest_emails").select("*").eq("digest_id", latestDigest.id)
         .order("urgency", { ascending: true });
       setDigestEmails(emailsData ?? []);
     }
-
     setLoading(false);
   }
 
   if (loading) {
     return (
-      <div className="flex flex-1 items-center justify-center bg-background">
-        <p className="text-muted-foreground">Loading...</p>
-      </div>
+      <AppLayout>
+        <div className="flex flex-1 items-center justify-center py-20">
+          <div className="text-center space-y-3">
+            <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto" />
+            <p className="text-sm text-muted-foreground">Loading your digests...</p>
+          </div>
+        </div>
+      </AppLayout>
     );
   }
 
   if (!user) return null;
 
   return (
-    <DashboardContent
-      user={user}
-      digests={digests}
-      digestEmails={digestEmails}
-    />
+    <AppLayout>
+      <DashboardContent user={user} digests={digests} digestEmails={digestEmails} />
+    </AppLayout>
   );
 }
