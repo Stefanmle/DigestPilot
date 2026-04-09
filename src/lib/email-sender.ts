@@ -126,8 +126,8 @@ export async function sendDigestEmail(
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/></head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 20px; background: #f9fafb;">
-  <div style="max-width: 560px; margin: 0 auto; background: #fff; border-radius: 16px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 0; background: #ffffff;">
+  <div style="max-width: 600px; margin: 0 auto; padding: 16px;">
     <div style="text-align: center; margin-bottom: 20px;">
       <div style="display: inline-block; width: 36px; height: 36px; background: #111; border-radius: 10px; color: #fff; font-weight: 700; font-size: 16px; line-height: 36px; text-align: center;">D</div>
     </div>
