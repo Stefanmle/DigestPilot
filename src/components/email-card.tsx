@@ -54,12 +54,14 @@ export function EmailCard({ email, onBlock }: { email: DigestEmail; onBlock?: (e
 
   const replySubject = `Re: ${email.subject ?? ""}`;
   const replyBody = email.suggested_reply?.slice(0, 1500) ?? "";
+  // Replace escaped \n with actual newlines for proper formatting in mailto/gmail
+  const replyBodyFormatted = replyBody.replace(/\\n/g, "\n");
 
   const gmailWebUrl = hasReply
-    ? `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(email.from_email ?? "")}&su=${encodeURIComponent(replySubject)}&body=${encodeURIComponent(replyBody)}`
+    ? `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(email.from_email ?? "")}&su=${encodeURIComponent(replySubject)}&body=${encodeURIComponent(replyBodyFormatted)}`
     : null;
   const mailtoUrl = hasReply
-    ? `mailto:${encodeURIComponent(email.from_email ?? "")}?subject=${encodeURIComponent(replySubject)}&body=${encodeURIComponent(replyBody)}`
+    ? `mailto:${encodeURIComponent(email.from_email ?? "")}?subject=${encodeURIComponent(replySubject)}&body=${encodeURIComponent(replyBodyFormatted)}`
     : null;
 
   const calendarLink = email.action_data?.start

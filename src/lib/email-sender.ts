@@ -44,11 +44,10 @@ export async function sendDigestEmail(
       const action = email.recommended_action ?? "archive";
       const replySubject = `Re: ${email.subject ?? ""}`;
       const replyBody = email.suggested_reply?.slice(0, 1500) ?? "";
-      const gmailWebUrl = email.suggested_reply
-        ? `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(email.from_email ?? "")}&su=${encodeURIComponent(replySubject)}&body=${encodeURIComponent(replyBody)}`
-        : null;
+      // Replace \n with actual newlines for proper encoding in mailto
+      const replyBodyFormatted = replyBody.replace(/\\n/g, "\n");
       const mailtoUrl = email.suggested_reply
-        ? `mailto:${encodeURIComponent(email.from_email ?? "")}?subject=${encodeURIComponent(replySubject)}&body=${encodeURIComponent(replyBody)}`
+        ? `mailto:${encodeURIComponent(email.from_email ?? "")}?subject=${encodeURIComponent(replySubject)}&body=${encodeURIComponent(replyBodyFormatted)}`
         : null;
       const editUrl = `${appUrl}/dashboard/${email.id}`;
       const replyTooLong =
@@ -106,15 +105,9 @@ export async function sendDigestEmail(
         <div style="margin-top: 10px;">
           ${
             mailtoUrl && !replyTooLong
-              ? `<a href="${mailtoUrl}" style="display: inline-block; background: #111; color: #fff; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; margin-right: 8px;">Reply in app &rarr;</a>`
-              : ""
+              ? `<a href="${mailtoUrl}" style="display: inline-block; background: #111; color: #fff; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600;">Reply &rarr;</a>`
+              : `<a href="${editUrl}" style="display: inline-block; background: #111; color: #fff; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600;" target="_blank">Reply &rarr;</a>`
           }
-          ${
-            gmailWebUrl && !replyTooLong
-              ? `<a href="${gmailWebUrl}" style="display: inline-block; background: #fff; color: #111; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 500; border: 1px solid #d1d5db; margin-right: 8px;" target="_blank">Reply in web &rarr;</a>`
-              : ""
-          }
-          <a href="${editUrl}" style="display: inline-block; background: #fff; color: #111; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 500; border: 1px solid #d1d5db;" target="_blank">Edit &amp; reply &rarr;</a>
         </div>`
             : ""
         }

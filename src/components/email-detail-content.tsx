@@ -21,7 +21,7 @@ interface DigestEmail {
 
 export function EmailDetailContent({ email }: { email: DigestEmail }) {
   const router = useRouter();
-  const [replyText, setReplyText] = useState(email.suggested_reply ?? "");
+  const [replyText, setReplyText] = useState((email.suggested_reply ?? "").replace(/\\n/g, "\n"));
   const [copied, setCopied] = useState(false);
 
   const replySubject = `Re: ${email.subject ?? ""}`;
