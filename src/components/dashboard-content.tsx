@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { createBrowserClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { EmailCard } from "@/components/email-card";
 import type { User } from "@supabase/supabase-js";
 
@@ -98,11 +98,6 @@ export function DashboardContent({
     }
   }
 
-  async function handleSignOut() {
-    await supabase.auth.signOut();
-    window.location.href = "/";
-  }
-
   async function handleBlockSender(email: any, action: string) {
     const { data: { session } } = await supabase.auth.getSession();
     const domain = email.from_email?.split("@")[1];
@@ -130,7 +125,6 @@ export function DashboardContent({
   const [replyPatternCount, setReplyPatternCount] = useState(0);
   const [repliedCount, setRepliedCount] = useState(0);
 
-  // Load learning stats on mount
   useEffect(() => {
     async function loadStats() {
       const { count: patternCount } = await supabase
@@ -153,165 +147,171 @@ export function DashboardContent({
   const replyCount = currentEmails.filter((e) => e.suggested_reply).length;
 
   return (
-    <div className="px-4 lg:px-8 py-6 max-w-3xl space-y-4">
-      {/* Digest Now button */}
-      <div className="flex items-center justify-between">
-        <div />
+    <div className="px-4 lg:px-8 py-5 lg:py-6 max-w-3xl space-y-4">
+      {/* Header with digest info + action */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-xl font-semibold tracking-tight">Your digest</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {latestDigest
+              ? new Date(latestDigest.created_at).toLocaleDateString("en-US", {
+                  weekday: "long",
+                  month: "long",
+                  day: "numeric",
+                })
+              : "No digests yet"}
+          </p>
+        </div>
         <Button
           onClick={handleDigestNow}
           disabled={digestingNow}
-          className="relative shadow-sm"
+          className="relative rounded-xl shadow-sm h-9 px-4 shrink-0 text-sm"
         >
           {digestingNow && (
             <span className="absolute -top-1 -right-1 flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-white/80"></span>
             </span>
           )}
           {digestingNow ? "Processing..." : "Digest now"}
         </Button>
       </div>
-        {/* Processing status — shown above existing content */}
-        {digestingNow && digestStatus && (
-          <Card className="border-primary/20 bg-primary/5">
-            <CardContent className="py-4">
-              <div className="flex items-center gap-3">
-                <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full shrink-0" />
-                <p className="text-sm font-medium">{digestStatus}</p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
-        {/* Digest summary */}
-        {latestDigest ? (
-          <Card>
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">
-                  {latestDigest.status === "completed"
-                    ? `${latestDigest.email_count ?? 0} emails`
-                    : latestDigest.status === "processing"
-                      ? "Processing..."
-                      : latestDigest.status === "failed"
-                        ? "Digest failed"
-                        : "Queued"}
-                </CardTitle>
-                {latestDigest.status === "completed" && (
-                  <div className="flex gap-3 text-xs text-muted-foreground">
-                    {urgentCount > 0 && (
-                      <span className="flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full bg-red-500" />
-                        {urgentCount} urgent
-                      </span>
-                    )}
-                    {replyCount > 0 && (
-                      <span>{replyCount} replies suggested</span>
-                    )}
-                  </div>
-                )}
+      {/* Processing status */}
+      {digestingNow && digestStatus && (
+        <Card className="border-primary/20 bg-primary/5 overflow-hidden">
+          <CardContent className="py-4">
+            <div className="flex items-center gap-3">
+              <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full shrink-0" />
+              <p className="text-sm font-medium">{digestStatus}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Digest summary stats */}
+      {latestDigest && latestDigest.status === "completed" && sortedEmails.length > 0 && (
+        <div className="flex items-center gap-4 text-sm">
+          <span className="font-medium">{latestDigest.email_count ?? sortedEmails.length} emails</span>
+          {urgentCount > 0 && (
+            <span className="flex items-center gap-1.5 text-muted-foreground">
+              <span className="w-2 h-2 rounded-full bg-red-500" />
+              {urgentCount} urgent
+            </span>
+          )}
+          {replyCount > 0 && (
+            <span className="text-muted-foreground">{replyCount} replies suggested</span>
+          )}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!latestDigest && (
+        <Card className="border-dashed">
+          <CardContent className="py-16 text-center space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+              <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+              </svg>
+            </div>
+            <div>
+              <p className="font-medium">No digests yet</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Tap "Digest now" to generate your first email summary.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 0 emails state */}
+      {latestDigest && latestDigest.status === "completed" && sortedEmails.length === 0 && (
+        <Card className="border-dashed">
+          <CardContent className="py-12 text-center space-y-2">
+            <p className="font-medium text-muted-foreground">No new emails since last digest</p>
+            <p className="text-sm text-muted-foreground">Check back later or try a different time range.</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Email list */}
+      {sortedEmails.length > 0 && (
+        <div className="space-y-3">
+          {sortedEmails.map((email) => (
+            <EmailCard key={email.id} email={email} onBlock={handleBlockSender} />
+          ))}
+        </div>
+      )}
+
+      {/* AI Learning Stats */}
+      {(replyPatternCount > 0 || repliedCount > 0) && (
+        <Card className="bg-gradient-to-r from-violet-50/60 to-blue-50/60 border-violet-200/40">
+          <CardContent className="py-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center text-violet-600 shrink-0">
+                <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342" />
+                </svg>
               </div>
-              <p className="text-sm text-muted-foreground">
-                {new Date(latestDigest.created_at).toLocaleDateString("en-US", {
-                  weekday: "long",
-                  month: "long",
+              <div className="flex-1">
+                <p className="text-sm font-medium">AI is learning your style</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {replyPatternCount} reply pattern{replyPatternCount !== 1 ? "s" : ""} learned
+                  {repliedCount > 0 && ` from ${repliedCount} email${repliedCount !== 1 ? "s" : ""}`}
+                  {replyPatternCount >= 10 ? " — suggestions are personalized" :
+                   replyPatternCount >= 5 ? " — getting better" :
+                   " — reply to more emails to improve suggestions"}
+                </p>
+              </div>
+              {replyPatternCount >= 10 && (
+                <div className="text-xs font-medium text-violet-600 bg-violet-100 px-2.5 py-1 rounded-full">
+                  Active
+                </div>
+              )}
+            </div>
+            {replyPatternCount > 0 && replyPatternCount < 30 && (
+              <div className="mt-3 ml-12">
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-1.5 bg-violet-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-violet-500 rounded-full transition-all duration-500"
+                      style={{ width: `${Math.min(100, (replyPatternCount / 30) * 100)}%` }}
+                    />
+                  </div>
+                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">{replyPatternCount}/30</span>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Digest history */}
+      {currentDigests.length > 1 && (
+        <div className="space-y-2 pt-2">
+          <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            Past digests
+          </h3>
+          <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none">
+            {currentDigests.map((d, i) => (
+              <Button
+                key={d.id}
+                size="sm"
+                variant={i === selectedDigestIndex ? "default" : "outline"}
+                onClick={() => selectDigest(i)}
+                className="whitespace-nowrap text-xs rounded-lg shrink-0"
+              >
+                {new Date(d.created_at).toLocaleDateString("en-US", {
+                  month: "short",
                   day: "numeric",
                   hour: "2-digit",
                   minute: "2-digit",
                 })}
-              </p>
-            </CardHeader>
-          </Card>
-        ) : (
-          <Card>
-            <CardContent className="py-12 text-center space-y-2">
-              <div className="text-4xl mb-2">📬</div>
-              <p className="font-medium">No digests yet</p>
-              <p className="text-sm text-muted-foreground">
-                Tap "Digest now" to generate your first one.
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Email list */}
-        {sortedEmails.length > 0 && (
-          <div className="space-y-3">
-            {sortedEmails.map((email) => (
-              <EmailCard key={email.id} email={email} onBlock={handleBlockSender} />
+              </Button>
             ))}
           </div>
-        )}
-
-        {/* AI Learning Stats */}
-        {(replyPatternCount > 0 || repliedCount > 0) && (
-          <Card className="bg-gradient-to-r from-violet-50/50 to-blue-50/50 border-violet-100/50">
-            <CardContent className="py-4">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center text-violet-600 shrink-0">
-                  <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342" />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">AI is learning your style</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {replyPatternCount} reply pattern{replyPatternCount !== 1 ? "s" : ""} learned
-                    {repliedCount > 0 && ` from ${repliedCount} email${repliedCount !== 1 ? "s" : ""}`}
-                    {replyPatternCount >= 10 ? " — suggestions are personalized" :
-                     replyPatternCount >= 5 ? " — getting better" :
-                     " — reply to more emails to improve suggestions"}
-                  </p>
-                </div>
-                {replyPatternCount >= 10 && (
-                  <div className="text-xs font-medium text-violet-600 bg-violet-100 px-2 py-1 rounded-full">
-                    Active
-                  </div>
-                )}
-              </div>
-              {replyPatternCount > 0 && replyPatternCount < 30 && (
-                <div className="mt-3 ml-12">
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 h-1.5 bg-violet-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-violet-500 rounded-full transition-all duration-500"
-                        style={{ width: `${Math.min(100, (replyPatternCount / 30) * 100)}%` }}
-                      />
-                    </div>
-                    <span className="text-[10px] text-muted-foreground">{replyPatternCount}/30 for auto-reply</span>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Digest history */}
-        {currentDigests.length > 1 && (
-          <div className="space-y-2 pt-2">
-            <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Past digests
-            </h2>
-            <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
-              {currentDigests.map((d, i) => (
-                <Button
-                  key={d.id}
-                  size="sm"
-                  variant={i === selectedDigestIndex ? "default" : "outline"}
-                  onClick={() => selectDigest(i)}
-                  className="whitespace-nowrap text-xs"
-                >
-                  {new Date(d.created_at).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </Button>
-              ))}
-            </div>
-          </div>
-        )}
+        </div>
+      )}
     </div>
   );
 }

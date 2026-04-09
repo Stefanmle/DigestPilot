@@ -35,28 +35,32 @@ export function EmailDetailContent({ email }: { email: DigestEmail }) {
   }
 
   return (
-    <div className="flex flex-col min-h-full bg-background">
-      <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
-        <div className="flex items-center gap-3 px-4 py-3 max-w-2xl mx-auto">
-          <Button size="sm" variant="ghost" onClick={() => router.push("/dashboard")}>
-            ← Back
-          </Button>
-          <div className="flex-1 min-w-0">
+    <div className="px-4 lg:px-8 py-6 max-w-3xl space-y-4">
+      {/* Back + email info */}
+      <div className="flex items-center gap-3">
+        <Button size="sm" variant="ghost" onClick={() => router.push("/dashboard")} className="shrink-0 -ml-2">
+          <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+          </svg>
+          Back
+        </Button>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
             <p className="text-sm font-semibold truncate">
               {email.from_name || email.from_email}
             </p>
-            <p className="text-xs text-muted-foreground truncate">
-              {email.subject}
-            </p>
+            <div className={`h-2.5 w-2.5 rounded-full shrink-0 ${
+              email.urgency === "high" ? "bg-red-500" :
+              email.urgency === "medium" ? "bg-amber-400" : "bg-zinc-300"
+            }`} />
           </div>
-          <div className={`h-2.5 w-2.5 rounded-full shrink-0 ${
-            email.urgency === "high" ? "bg-red-500" :
-            email.urgency === "medium" ? "bg-amber-400" : "bg-zinc-300"
-          }`} />
+          <p className="text-xs text-muted-foreground truncate">
+            {email.subject}
+          </p>
         </div>
-      </header>
+      </div>
 
-      <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full space-y-4">
+      <div className="space-y-4">
         {/* AI Summary */}
         <Card>
           <CardHeader className="pb-2">
@@ -122,7 +126,7 @@ export function EmailDetailContent({ email }: { email: DigestEmail }) {
             </CardContent>
           </Card>
         )}
-      </main>
+      </div>
     </div>
   );
 }

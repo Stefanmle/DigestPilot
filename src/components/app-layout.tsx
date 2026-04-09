@@ -32,53 +32,50 @@ export function AppLayout({ children }: AppLayoutProps) {
   }
 
   const navItems = [
-    { href: "/dashboard", label: "Dashboard", icon: MailIcon, description: "Your email digests" },
-    { href: "/inboxes", label: "Inboxes", icon: InboxIcon, description: "Connected accounts" },
-    { href: "/settings", label: "Settings", icon: SettingsIcon, description: "Preferences & privacy" },
+    { href: "/dashboard", label: "Dashboard", icon: MailIcon },
+    { href: "/inboxes", label: "Inboxes", icon: InboxIcon },
+    { href: "/settings", label: "Settings", icon: SettingsIcon },
   ];
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
 
   return (
-    <div className="flex min-h-full bg-muted/30">
+    <div className="flex min-h-dvh bg-background">
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-background border-r">
+      <aside className="hidden lg:flex lg:flex-col lg:w-[260px] lg:fixed lg:inset-y-0 bg-background border-r border-border/50">
         {/* Logo */}
-        <div className="flex items-center gap-2.5 px-6 py-5 border-b">
-          <div className="w-9 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold shadow-sm">
+        <div className="flex items-center gap-3 px-6 h-16 border-b border-border/50">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground flex items-center justify-center text-sm font-bold shadow-sm">
             D
           </div>
           <div>
-            <h1 className="text-base font-semibold tracking-tight">DigestPilot</h1>
+            <h1 className="text-[15px] font-semibold tracking-tight">DigestPilot</h1>
             <p className="text-[10px] text-muted-foreground leading-none">AI Email Assistant</p>
           </div>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className="flex-1 px-3 py-4 space-y-0.5">
           {navItems.map((item) => (
             <button
               key={item.href}
               onClick={() => router.push(item.href)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-150 ${
                 isActive(item.href)
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                  ? "bg-primary/8 text-primary font-medium shadow-sm shadow-primary/5"
+                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
               }`}
             >
-              <item.icon className={`w-5 h-5 ${isActive(item.href) ? "text-primary" : ""}`} />
-              <div>
-                <p className="text-sm font-medium leading-none">{item.label}</p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">{item.description}</p>
-              </div>
+              <item.icon className={`w-[18px] h-[18px] ${isActive(item.href) ? "text-primary" : ""}`} />
+              <span className="text-sm">{item.label}</span>
             </button>
           ))}
         </nav>
 
         {/* User info */}
-        <div className="border-t px-4 py-4">
+        <div className="border-t border-border/50 px-4 py-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-400 to-blue-400 flex items-center justify-center text-white text-sm font-semibold shadow-sm">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center text-white text-xs font-semibold shadow-sm">
               {(userProfile?.name ?? user?.email ?? "?")[0].toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
@@ -88,43 +85,31 @@ export function AppLayout({ children }: AppLayoutProps) {
           </div>
           <button
             onClick={handleSignOut}
-            className="mt-3 w-full text-left text-xs text-muted-foreground hover:text-destructive transition-colors"
+            className="mt-3 w-full flex items-center gap-2 text-xs text-muted-foreground hover:text-destructive transition-colors px-1"
           >
+            <LogOutIcon className="w-3.5 h-3.5" />
             Sign out
           </button>
         </div>
       </aside>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col lg:pl-64">
+      <div className="flex-1 flex flex-col min-w-0 lg:pl-[260px] pb-[72px] lg:pb-0">
         {/* Mobile header */}
-        <header className="lg:hidden sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="flex items-center justify-between px-4 py-3">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">
+        <header className="lg:hidden sticky top-0 z-20 border-b border-border/50 bg-background/95 backdrop-blur-lg supports-[backdrop-filter]:bg-background/80">
+          <div className="flex items-center justify-between px-4 h-14">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 text-primary-foreground flex items-center justify-center text-sm font-bold shadow-sm">
                 D
               </div>
-              <h1 className="text-lg font-semibold">DigestPilot</h1>
+              <h1 className="text-base font-semibold tracking-tight">DigestPilot</h1>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-400 to-blue-400 flex items-center justify-center text-white text-[11px] font-semibold">
-                {(userProfile?.name ?? user?.email ?? "?")[0].toUpperCase()}
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {/* Desktop header */}
-        <header className="hidden lg:block border-b bg-background/95 backdrop-blur sticky top-0 z-10">
-          <div className="flex items-center justify-between px-8 py-4 max-w-4xl">
-            <div>
-              <h2 className="text-lg font-semibold">
-                {navItems.find((n) => isActive(n.href))?.label ?? "Dashboard"}
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                {navItems.find((n) => isActive(n.href))?.description}
-              </p>
-            </div>
+            <button
+              onClick={() => router.push("/settings")}
+              className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center text-white text-xs font-semibold shadow-sm"
+            >
+              {(userProfile?.name ?? user?.email ?? "?")[0].toUpperCase()}
+            </button>
           </div>
         </header>
 
@@ -132,27 +117,27 @@ export function AppLayout({ children }: AppLayoutProps) {
         <main className="flex-1">
           {children}
         </main>
-
-        {/* Mobile bottom nav */}
-        <nav className="lg:hidden sticky bottom-0 border-t bg-background/95 backdrop-blur">
-          <div className="flex justify-around py-1.5 max-w-md mx-auto">
-            {navItems.map((item) => (
-              <button
-                key={item.href}
-                onClick={() => router.push(item.href)}
-                className={`flex flex-col items-center gap-0.5 py-1.5 px-5 rounded-lg transition-colors ${
-                  isActive(item.href) ? "text-primary" : "text-muted-foreground"
-                }`}
-              >
-                <item.icon className="w-5 h-5" />
-                <span className={`text-[11px] ${isActive(item.href) ? "font-medium" : ""}`}>
-                  {item.label}
-                </span>
-              </button>
-            ))}
-          </div>
-        </nav>
       </div>
+
+      {/* Mobile bottom nav — fixed at bottom, clear of content */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-20 border-t border-border/50 bg-background/95 backdrop-blur-lg supports-[backdrop-filter]:bg-background/80">
+        <div className="flex justify-around items-center h-[60px] pb-[env(safe-area-inset-bottom)] max-w-md mx-auto">
+          {navItems.map((item) => (
+            <button
+              key={item.href}
+              onClick={() => router.push(item.href)}
+              className={`flex flex-col items-center justify-center gap-1 py-1 px-6 rounded-xl transition-all duration-150 ${
+                isActive(item.href) ? "text-primary" : "text-muted-foreground active:scale-95"
+              }`}
+            >
+              <item.icon className={`w-5 h-5 ${isActive(item.href) ? "text-primary" : ""}`} />
+              <span className={`text-[10px] leading-none ${isActive(item.href) ? "font-semibold" : "font-medium"}`}>
+                {item.label}
+              </span>
+            </button>
+          ))}
+        </div>
+      </nav>
     </div>
   );
 }
@@ -178,6 +163,14 @@ function SettingsIcon({ className }: { className?: string }) {
     <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+    </svg>
+  );
+}
+
+function LogOutIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
     </svg>
   );
 }

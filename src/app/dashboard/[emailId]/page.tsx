@@ -35,9 +35,11 @@ export default function EmailDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-1 items-center justify-center bg-background">
-        <p className="text-muted-foreground">Loading...</p>
-      </div>
+      <AppLayout>
+        <div className="flex flex-1 items-center justify-center py-20">
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </AppLayout>
     );
   }
 
