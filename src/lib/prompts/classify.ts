@@ -48,13 +48,13 @@ Classify each email. Return a JSON object mapping each email ID to an object wit
   - "title": short event title
   - "start": ISO 8601 datetime (best guess, use today's date if only time mentioned)
   - "end": ISO 8601 datetime (default: 1 hour after start)
-  - "location": string or null
-  - "description": one-line context
-  IMPORTANT: A "reply" email can ALSO have an event. E.g. "Call me tomorrow at 9am" → action is "reply" AND event is extracted.
+  - "location": phone number, address, Zoom/Meet link, or null — extract whatever contact info is relevant
+  - "description": include key details: phone numbers, links, addresses, names, context
+  IMPORTANT: A "reply" email can ALSO have an event. E.g. "Call me at 0704405600 tomorrow at 9am" → action is "reply" AND event with location="0704405600" and description mentioning the phone number.
 
 Emails:
 ${emailList}
 
 Respond ONLY with JSON. Example:
-{"id1": {"urgency": "high", "category": "work", "action": "reply", "action_reason": "Wants a call tomorrow 9am", "event": {"title": "Call with client", "start": "2026-04-10T09:00:00", "end": "2026-04-10T09:30:00", "location": null, "description": "Client requested callback"}}, "id2": {"urgency": "low", "category": "newsletter", "action": "unsubscribe", "action_reason": "Marketing promo — likely unwanted"}, "id3": {"urgency": "medium", "category": "work", "action": "calendar", "action_reason": "Team meeting Thursday 2pm", "event": {"title": "Team sync", "start": "2026-04-10T14:00:00", "end": "2026-04-10T15:00:00", "location": "Google Meet", "description": "Weekly team sync"}}, "id4": {"urgency": "low", "category": "notification", "action": "follow_up", "action_reason": "Package arriving Friday"}}`;
+{"id1": {"urgency": "high", "category": "work", "action": "reply", "action_reason": "Wants a call tomorrow 9am", "event": {"title": "Call Alexander", "start": "2026-04-10T09:00:00", "end": "2026-04-10T09:30:00", "location": "tel:0704405600", "description": "Call Alexander at 0704405600 — needs help urgently"}}, "id2": {"urgency": "low", "category": "newsletter", "action": "unsubscribe", "action_reason": "Marketing promo — likely unwanted"}, "id3": {"urgency": "medium", "category": "work", "action": "calendar", "action_reason": "Team meeting Thursday 2pm", "event": {"title": "Team sync", "start": "2026-04-10T14:00:00", "end": "2026-04-10T15:00:00", "location": "Google Meet", "description": "Weekly team sync"}}, "id4": {"urgency": "low", "category": "notification", "action": "follow_up", "action_reason": "Package arriving Friday"}}`;
 }
