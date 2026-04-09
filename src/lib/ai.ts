@@ -43,8 +43,20 @@ export async function processDigestEmails(
   let totalInputTokens = 0;
   let totalOutputTokens = 0;
 
-  // Step 1: Classify urgency + category (Haiku, batched) — ALL emails
-  const classification = await classifyEmails(emails);
+  // Step 1: Classify urgency + category (Haiku) — batch to avoid overloading
+  const classificationBatches = createDynamicBatches(emails, 15000); // ~15 emails per batch
+  const classificationResults: Record<string, { urgency: "low" | "medium" | "high"; category: string; action: string; actionReason?: string; event?: Record<string, any> }> = {};
+  let classInputTokens = 0;
+  let classOutputTokens = 0;
+
+  for (const batch of classificationBatches) {
+    const batchResult = await classifyEmails(batch);
+    Object.assign(classificationResults, batchResult.results);
+    classInputTokens += batchResult.inputTokens;
+    classOutputTokens += batchResult.outputTokens;
+  }
+
+  const classification = { results: classificationResults, inputTokens: classInputTokens, outputTokens: classOutputTokens };
   totalInputTokens += classification.inputTokens;
   totalOutputTokens += classification.outputTokens;
 
@@ -139,7 +151,7 @@ async function classifyEmails(
 
   const response = await anthropic.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 4096,
+    max_tokens: 8192,
     messages: [{ role: "user", content: prompt }],
   });
 
