@@ -13,7 +13,13 @@ export function classifyUrgencyPrompt(emails: EmailInput[]): string {
     )
     .join("\n---\n");
 
-  return `Classify each email. Return a JSON object mapping each email ID to an object with these fields:
+  const today = new Date();
+  const dateStr = today.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+  const isoDate = today.toISOString().slice(0, 10);
+
+  return `Today is ${dateStr} (${isoDate}). Use this to resolve relative dates like "tomorrow", "next week", "Friday", etc.
+
+Classify each email. Return a JSON object mapping each email ID to an object with these fields:
 
 "urgency": "high" | "medium" | "low"
   - high = needs reply today, time-sensitive, direct question from real person
