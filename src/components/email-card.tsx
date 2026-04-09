@@ -19,6 +19,7 @@ interface DigestEmail {
   reply_matched_at: string | null;
   thread_id: string;
   recommended_action: string | null;
+  action_reason: string | null;
   action_data: Record<string, any> | null;
 }
 
@@ -76,29 +77,37 @@ export function EmailCard({ email, onBlock }: { email: DigestEmail; onBlock?: (e
   function renderActionButton() {
     const config = actionConfig[action];
     if (!config) return null;
+    const reason = email.action_reason;
 
     if (action === "reply" && hasReply && !wasReplied) {
-      // Reply action — show toggle for suggested reply
-      return null; // Handled by the existing reply expansion below
+      // Reply action — handled by the reply expansion below, but show reason
+      return reason ? (
+        <span className="inline-flex items-center gap-1.5 text-[12px] text-primary font-medium">
+          💬 {reason}
+        </span>
+      ) : null;
     }
 
     if (action === "calendar" && calendarLink) {
       return (
-        <a
-          href={calendarLink}
-          target="_blank"
-          rel="noopener"
-          onClick={(e) => e.stopPropagation()}
-          className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-[13px] font-medium transition-colors ${config.className}`}
-        >
-          <CalendarIcon className="w-3.5 h-3.5" />
-          {config.label}
-          {email.action_data?.start && (
-            <span className="opacity-80 text-[11px] ml-1">
-              {new Date(email.action_data.start).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-            </span>
-          )}
-        </a>
+        <div className="flex flex-col gap-1">
+          <a
+            href={calendarLink}
+            target="_blank"
+            rel="noopener"
+            onClick={(e) => e.stopPropagation()}
+            className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-[13px] font-medium transition-colors w-fit ${config.className}`}
+          >
+            <CalendarIcon className="w-3.5 h-3.5" />
+            {config.label}
+            {email.action_data?.start && (
+              <span className="opacity-80 text-[11px] ml-1">
+                {new Date(email.action_data.start).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+              </span>
+            )}
+          </a>
+          {reason && <span className="text-[11px] text-muted-foreground">{reason}</span>}
+        </div>
       );
     }
 
@@ -113,14 +122,49 @@ export function EmailCard({ email, onBlock }: { email: DigestEmail; onBlock?: (e
       );
     }
 
-    // For archive, follow_up, unsubscribe — show as subtle label
-    return (
-      <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
-        {action === "follow_up" && <ClockIcon className="w-3 h-3" />}
-        {action === "archive" && <ArchiveIcon className="w-3 h-3" />}
-        {config.label}
-      </span>
-    );
+    if (action === "unsubscribe") {
+      // Gmail search for unsubscribe link from this sender
+      const unsubSearchUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email.from_email ?? "")}&su=${encodeURIComponent("Unsubscribe")}&body=${encodeURIComponent("Please unsubscribe me from this mailing list.")}`;
+      const gmailSearchUrl = `https://mail.google.com/mail/u/0/#search/from%3A${encodeURIComponent(email.from_email ?? "")}+unsubscribe`;
+      return (
+        <div className="flex items-center gap-2">
+          <a
+            href={gmailSearchUrl}
+            target="_blank"
+            rel="noopener"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-[13px] font-medium transition-colors bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+          >
+            📭 Unsubscribe
+          </a>
+          <button
+            onClick={(e) => { e.stopPropagation(); setBlocked(true); onBlock?.(email, "spam"); }}
+            className="text-[11px] text-muted-foreground hover:text-destructive transition-colors"
+          >
+            or block
+          </button>
+          {reason && <span className="text-[11px] text-muted-foreground">— {reason}</span>}
+        </div>
+      );
+    }
+
+    if (action === "follow_up") {
+      return (
+        <div className="flex items-center gap-1.5">
+          <span className="inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-[12px] font-medium bg-amber-50 text-amber-700 ring-1 ring-amber-200/60">
+            <ClockIcon className="w-3 h-3" />
+            Follow up
+          </span>
+          {reason && <span className="text-[12px] text-muted-foreground">— {reason}</span>}
+        </div>
+      );
+    }
+
+    // Archive — just show reason if there is one
+    if (reason) {
+      return <span className="text-[11px] text-muted-foreground">{reason}</span>;
+    }
+    return null;
   }
 
   return (

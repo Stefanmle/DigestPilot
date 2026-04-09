@@ -85,7 +85,7 @@ export async function POST(
         const { messages, newSyncCursor } = await fetchNewEmails(
           oauth2Client,
           inbox.sync_cursor,
-          20 // Start with 20 for testing, increase to 100 for production
+          50 // Fetch up to 50 emails per digest
         );
 
         // Update sync cursor
@@ -169,6 +169,7 @@ export async function POST(
           ai_summary: result.summary,
           suggested_reply: result.suggestedReply,
           recommended_action: result.recommendedAction,
+          action_reason: result.actionReason,
           action_data: result.actionData,
         });
       }

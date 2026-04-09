@@ -29,6 +29,7 @@ interface DigestResult {
   suggestedReply: string | null;
   tokenEstimate: number;
   recommendedAction: string;
+  actionReason: string | null;
   actionData: Record<string, any> | null;
 }
 
@@ -110,6 +111,7 @@ export async function processDigestEmails(
       suggestedReply: r.suggestedReply,
       tokenEstimate: Math.ceil(r.emailBody.length / 4),
       recommendedAction: cls?.action ?? "archive",
+      actionReason: cls?.actionReason ?? null,
       actionData: cls?.event ?? null,
     };
   });
@@ -129,7 +131,7 @@ export async function processDigestEmails(
 async function classifyEmails(
   emails: EmailInput[]
 ): Promise<{
-  results: Record<string, { urgency: "low" | "medium" | "high"; category: string; action: string; event?: Record<string, any> }>;
+  results: Record<string, { urgency: "low" | "medium" | "high"; category: string; action: string; actionReason?: string; event?: Record<string, any> }>;
   inputTokens: number;
   outputTokens: number;
 }> {
@@ -145,7 +147,7 @@ async function classifyEmails(
     response.content[0].type === "text" ? response.content[0].text : "";
 
   const validActions = ["reply", "calendar", "follow_up", "archive", "spam", "unsubscribe"];
-  const results: Record<string, { urgency: "low" | "medium" | "high"; category: string; action: string; event?: Record<string, any> }> = {};
+  const results: Record<string, { urgency: "low" | "medium" | "high"; category: string; action: string; actionReason?: string; event?: Record<string, any> }> = {};
   try {
     const parsed = parseJsonResponse(text);
     for (const [id, val] of Object.entries(parsed)) {
@@ -155,6 +157,7 @@ async function classifyEmails(
         urgency: ["high", "medium", "low"].includes(v.urgency) ? v.urgency : "medium",
         category: v.category ?? "personal",
         action,
+        ...(v.action_reason ? { actionReason: v.action_reason } : {}),
         ...(action === "calendar" && v.event ? { event: v.event } : {}),
       };
     }

@@ -115,8 +115,8 @@ export async function fetchNewEmails(
       }
     }
   } else {
-    // First sync — try today, then expand to last 7 days, then 30 days
-    for (const daysBack of [0, 7, 30]) {
+    // First sync — go back 7 days for a rich first digest, expand to 30 if needed
+    for (const daysBack of [7, 30]) {
       const since = new Date();
       since.setDate(since.getDate() - daysBack);
       since.setHours(0, 0, 0, 0);

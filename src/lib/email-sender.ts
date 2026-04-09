@@ -12,6 +12,7 @@ interface DigestEmailRow {
   ai_summary: string | null;
   suggested_reply: string | null;
   recommended_action: string | null;
+  action_reason: string | null;
   action_data: Record<string, any> | null;
 }
 
@@ -59,7 +60,12 @@ export async function sendDigestEmail(
         : null;
 
       // Action badge
-      const actionBadge = getActionBadgeHtml(action, email.action_data);
+      const actionBadge = getActionBadgeHtml(action, email.action_data, email.action_reason, email.from_email);
+
+      // Unsubscribe link for newsletter emails
+      const unsubGmailUrl = action === "unsubscribe" && email.from_email
+        ? `https://mail.google.com/mail/u/0/#search/from%3A${encodeURIComponent(email.from_email)}+unsubscribe`
+        : null;
 
       return `
       <div style="border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; margin-bottom: 12px; ${action === "calendar" ? "border-left: 3px solid #3b82f6;" : action === "reply" ? "border-left: 3px solid #111;" : ""}">
@@ -73,6 +79,14 @@ export async function sendDigestEmail(
           ${escapeHtml(email.ai_summary ?? "")}
         </div>
         ${actionBadge}
+        ${
+          unsubGmailUrl
+            ? `
+        <div style="margin-top: 10px;">
+          <a href="${unsubGmailUrl}" style="display: inline-block; background: #f3f4f6; color: #374151; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 500;" target="_blank">📭 Find unsubscribe link</a>
+        </div>`
+            : ""
+        }
         ${
           calLink
             ? `
@@ -154,14 +168,15 @@ export async function sendDigestEmail(
   });
 }
 
-function getActionBadgeHtml(action: string, actionData: Record<string, any> | null): string {
+function getActionBadgeHtml(action: string, actionData: Record<string, any> | null, actionReason: string | null, fromEmail: string | null): string {
+  const reasonHtml = actionReason ? ` <span style="font-weight: 400; opacity: 0.8;">— ${escapeHtml(actionReason)}</span>` : '';
   const badges: Record<string, string> = {
-    reply: '<span style="display: inline-block; background: #f3f4f6; color: #374151; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px; margin-top: 8px;">💬 Reply suggested</span>',
-    calendar: `<span style="display: inline-block; background: #eff6ff; color: #2563eb; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px; margin-top: 8px;">📅 ${actionData?.title ? escapeHtml(actionData.title) : "Calendar event"}</span>`,
-    follow_up: '<span style="display: inline-block; background: #fef3c7; color: #92400e; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px; margin-top: 8px;">⏰ Follow up later</span>',
-    spam: '<span style="display: inline-block; background: #fef2f2; color: #dc2626; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px; margin-top: 8px;">🚫 Spam</span>',
-    unsubscribe: '<span style="display: inline-block; background: #f3f4f6; color: #6b7280; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px; margin-top: 8px;">📭 Consider unsubscribing</span>',
-    archive: '',
+    reply: `<span style="display: inline-block; background: #f3f4f6; color: #374151; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px; margin-top: 8px;">💬 Reply suggested${reasonHtml}</span>`,
+    calendar: `<span style="display: inline-block; background: #eff6ff; color: #2563eb; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px; margin-top: 8px;">📅 ${actionData?.title ? escapeHtml(actionData.title) : "Calendar event"}${reasonHtml}</span>`,
+    follow_up: `<span style="display: inline-block; background: #fef3c7; color: #92400e; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px; margin-top: 8px;">⏰ Follow up${reasonHtml}</span>`,
+    spam: `<span style="display: inline-block; background: #fef2f2; color: #dc2626; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px; margin-top: 8px;">🚫 Spam${reasonHtml}</span>`,
+    unsubscribe: `<span style="display: inline-block; background: #f3f4f6; color: #6b7280; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px; margin-top: 8px;">📭 Unsubscribe${reasonHtml}</span>`,
+    archive: actionReason ? `<span style="display: inline-block; color: #9ca3af; font-size: 11px; margin-top: 8px;">${escapeHtml(actionReason)}</span>` : '',
   };
   return badges[action] ?? '';
 }
