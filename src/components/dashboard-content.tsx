@@ -65,15 +65,17 @@ export function DashboardContent({
         const { data: digest } = await supabase
           .from("digests").select("*").eq("id", digestId).single();
 
-        if (digest?.status === "processing") {
+        if (digest?.status === "processing" || digest?.status === "queued") {
           // Show live email count
           const { count } = await supabase
             .from("digest_emails")
             .select("*", { count: "exact", head: true })
             .eq("digest_id", digestId);
-          setDigestStatus(count && count > 0
-            ? `AI is reading and summarizing... ${count} email${count !== 1 ? "s" : ""} processed`
-            : "AI is reading and summarizing...");
+          if (count && count > 0) {
+            setDigestStatus(`AI is reading and summarizing... ${count} email${count !== 1 ? "s" : ""} processed`);
+          } else if (digest?.status === "processing") {
+            setDigestStatus("AI is reading and summarizing...");
+          }
         } else if (digest?.status === "completed") {
           clearInterval(pollInterval);
           setDigestStatus(null);
@@ -212,8 +214,8 @@ export function DashboardContent({
         </div>
       )}
 
-      {/* Empty state */}
-      {!latestDigest && (
+      {/* Empty state — hide when digesting */}
+      {!latestDigest && !digestingNow && (
         <Card className="border-dashed">
           <CardContent className="py-16 text-center space-y-3">
             <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
