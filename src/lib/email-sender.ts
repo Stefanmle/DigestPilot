@@ -23,7 +23,7 @@ export async function sendDigestEmail(
 ): Promise<void> {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const urgentCount = emails.filter((e) => e.urgency === "high").length;
-  const calendarCount = emails.filter((e) => e.recommended_action === "calendar").length;
+  const calendarCount = emails.filter((e) => e.action_data?.start).length;
 
   const urgencyDot: Record<string, string> = {
     high: "🔴",
@@ -54,8 +54,8 @@ export async function sendDigestEmail(
       const replyTooLong =
         email.suggested_reply && email.suggested_reply.length > 1500;
 
-      // Calendar link
-      const calLink = action === "calendar" && email.action_data
+      // Calendar link — show whenever event data exists, regardless of action
+      const calLink = email.action_data?.start
         ? googleCalendarUrl(email.action_data as any)
         : null;
 

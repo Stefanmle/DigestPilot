@@ -62,7 +62,7 @@ export function EmailCard({ email, onBlock }: { email: DigestEmail; onBlock?: (e
     ? `mailto:${encodeURIComponent(email.from_email ?? "")}?subject=${encodeURIComponent(replySubject)}&body=${encodeURIComponent(replyBody)}`
     : null;
 
-  const calendarLink = action === "calendar" && email.action_data
+  const calendarLink = email.action_data?.start
     ? googleCalendarUrl(email.action_data as any)
     : null;
 
@@ -80,12 +80,33 @@ export function EmailCard({ email, onBlock }: { email: DigestEmail; onBlock?: (e
     const reason = email.action_reason;
 
     if (action === "reply" && hasReply && !wasReplied) {
-      // Reply action — handled by the reply expansion below, but show reason
-      return reason ? (
-        <span className="inline-flex items-center gap-1.5 text-[12px] text-primary font-medium">
-          💬 {reason}
-        </span>
-      ) : null;
+      // Reply action — show reason + calendar if event exists
+      return (
+        <div className="flex flex-col gap-1.5">
+          {reason && (
+            <span className="inline-flex items-center gap-1.5 text-[12px] text-primary font-medium">
+              💬 {reason}
+            </span>
+          )}
+          {calendarLink && (
+            <a
+              href={calendarLink}
+              target="_blank"
+              rel="noopener"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-[13px] font-medium transition-colors bg-blue-600 text-white hover:bg-blue-700 w-fit"
+            >
+              <CalendarIcon className="w-3.5 h-3.5" />
+              Add to calendar
+              {email.action_data?.start && (
+                <span className="opacity-80 text-[11px] ml-1">
+                  {new Date(email.action_data.start).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                </span>
+              )}
+            </a>
+          )}
+        </div>
+      );
     }
 
     if (action === "calendar" && calendarLink) {

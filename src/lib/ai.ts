@@ -158,7 +158,7 @@ async function classifyEmails(
         category: v.category ?? "personal",
         action,
         ...(v.action_reason ? { actionReason: v.action_reason } : {}),
-        ...(action === "calendar" && v.event ? { event: v.event } : {}),
+        ...(v.event ? { event: v.event } : {}),
       };
     }
   } catch {
