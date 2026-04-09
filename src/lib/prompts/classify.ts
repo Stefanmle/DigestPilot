@@ -9,7 +9,7 @@ export function classifyUrgencyPrompt(emails: EmailInput[]): string {
   const emailList = emails
     .map(
       (e) =>
-        `ID: ${e.id}\nFrom: ${e.from}\nSubject: ${e.subject}\nPreview: ${e.body.slice(0, 500)}`
+        `ID: ${e.id}\nFrom: ${e.from}\nSubject: ${e.subject}\nBody: ${e.body.slice(0, 1000)}`
     )
     .join("\n---\n");
 
@@ -45,12 +45,14 @@ Classify each email. Return a JSON object mapping each email ID to an object wit
   This helps the user understand the action at a glance.
 
 "event" (include whenever ANY date, time, meeting, deadline, or appointment is mentioned — even if action is "reply" or "follow_up"):
-  - "title": short event title
-  - "start": ISO 8601 datetime (best guess, use today's date if only time mentioned)
+  - "title": short, clear title describing the PRIMARY thing happening (e.g. "Meeting at Alexander's", "Call with client")
+  - "start": ISO 8601 datetime for the PRIMARY event (read carefully — "come at 11:00" means 11:00, not 9:00)
   - "end": ISO 8601 datetime (default: 1 hour after start)
-  - "location": phone number, address, Zoom/Meet link, or null — extract whatever contact info is relevant
-  - "description": include key details: phone numbers, links, addresses, names, context
-  IMPORTANT: A "reply" email can ALSO have an event. E.g. "Call me at 0704405600 tomorrow at 9am" → action is "reply" AND event with location="0704405600" and description mentioning the phone number.
+  - "location": physical address, phone number, Zoom/Meet link — whatever is most relevant for the PRIMARY event
+  - "description": include ALL key details: phone numbers, addresses, backup plans, conditions
+  IMPORTANT: Read the email carefully to understand what the PRIMARY event is. Example:
+  - "Come to Storgatan 5 at 11:00. If you can't, call me at 073-1234567 before 8:00" → the event is the VISIT at 11:00, location is the ADDRESS, and the phone number goes in description as backup.
+  - "Call me at 0704405600 tomorrow at 9am" → the event is the CALL at 9:00, location is "tel:0704405600".
 
 Emails:
 ${emailList}
