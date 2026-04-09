@@ -90,8 +90,9 @@ export async function sendDigestEmail(
           calLink
             ? `
         <div style="margin-top: 12px;">
-          <a href="${calLink}" style="display: inline-block; background: #3b82f6; color: #fff; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600;" target="_blank">📅 Add to calendar</a>
-          ${email.action_data?.start ? `<span style="display: inline-block; margin-left: 10px; font-size: 12px; color: #6b7280; vertical-align: middle;">${formatEventTime(email.action_data.start, email.action_data.end)}</span>` : ""}
+          <a href="${appUrl}/api/calendar/${email.id}" style="display: inline-block; background: #3b82f6; color: #fff; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600;" target="_blank">📅 Add to calendar</a>
+          <a href="${calLink}" style="display: inline-block; margin-left: 8px; color: #3b82f6; font-size: 12px; text-decoration: underline; vertical-align: middle;" target="_blank">Google Calendar</a>
+          ${email.action_data?.start ? `<span style="display: inline-block; margin-left: 8px; font-size: 12px; color: #6b7280; vertical-align: middle;">${formatEventTime(email.action_data.start, email.action_data.end)}</span>` : ""}
         </div>`
             : ""
         }
