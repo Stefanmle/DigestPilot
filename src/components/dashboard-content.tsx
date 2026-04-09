@@ -66,7 +66,14 @@ export function DashboardContent({
           .from("digests").select("*").eq("id", digestId).single();
 
         if (digest?.status === "processing") {
-          setDigestStatus("AI is reading and summarizing...");
+          // Show live email count
+          const { count } = await supabase
+            .from("digest_emails")
+            .select("*", { count: "exact", head: true })
+            .eq("digest_id", digestId);
+          setDigestStatus(count && count > 0
+            ? `AI is reading and summarizing... ${count} email${count !== 1 ? "s" : ""} processed`
+            : "AI is reading and summarizing...");
         } else if (digest?.status === "completed") {
           clearInterval(pollInterval);
           setDigestStatus(null);
