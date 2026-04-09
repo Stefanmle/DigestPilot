@@ -91,7 +91,7 @@ export function DashboardContent({
         }
       }, 2000);
 
-      setTimeout(() => { clearInterval(pollInterval); if (digestingNow) { setDigestStatus(null); setDigestingNow(false); } }, 120000);
+      setTimeout(() => { clearInterval(pollInterval); if (digestingNow) { setDigestStatus("Taking longer than expected — refresh the page to check."); setTimeout(() => { setDigestingNow(false); setDigestStatus(null); }, 5000); } }, 300000);
     } catch {
       setDigestStatus("Something went wrong. Try again.");
       setTimeout(() => { setDigestingNow(false); setDigestStatus(null); }, 3000);
