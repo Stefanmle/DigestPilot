@@ -73,8 +73,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Fan out to process endpoint
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  // Fan out to process endpoint — use request origin as fallback
+  const origin = request.headers.get("origin") ?? request.headers.get("referer")?.replace(/\/[^/]*$/, "") ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || origin;
   fetch(`${baseUrl}/api/digest/process/${digest.id}`, {
     method: "POST",
     headers: {

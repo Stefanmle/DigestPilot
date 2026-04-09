@@ -70,7 +70,9 @@ export async function GET(request: NextRequest) {
     }
 
     // 5. Fan out: trigger processing for each digest
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    const requestHost = request.headers.get("host") ?? "";
+    const protocol = requestHost.includes("localhost") ? "http" : "https";
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${requestHost}`;
     for (const digestId of digestIds) {
       // Fire-and-forget — each runs in its own function invocation
       fetch(`${baseUrl}/api/digest/process/${digestId}`, {
