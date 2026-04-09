@@ -153,7 +153,7 @@ export async function sendDigestEmail(
     .join("\n---\n");
 
   await resend.emails.send({
-    from: "DigestPilot <onboarding@resend.dev>",
+    from: "DigestPilot <digest@nokmi.site>",
     to,
     subject: `DigestPilot: ${emails.length} new message${emails.length !== 1 ? "s" : ""}${urgentCount > 0 ? ` (${urgentCount} urgent)` : ""}${calendarCount > 0 ? ` 📅` : ""}`,
     html,
