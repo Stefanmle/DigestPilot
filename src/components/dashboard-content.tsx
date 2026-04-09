@@ -152,18 +152,20 @@ export function DashboardContent({
 
       {/* Main content */}
       <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full space-y-4">
-        {/* Processing status */}
+        {/* Processing status — shown above existing content */}
         {digestingNow && digestStatus && (
           <Card className="border-primary/20 bg-primary/5">
-            <CardContent className="py-6 text-center">
-              <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-3" />
-              <p className="text-sm font-medium">{digestStatus}</p>
+            <CardContent className="py-4">
+              <div className="flex items-center gap-3">
+                <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full shrink-0" />
+                <p className="text-sm font-medium">{digestStatus}</p>
+              </div>
             </CardContent>
           </Card>
         )}
 
         {/* Digest summary */}
-        {latestDigest && !digestingNow ? (
+        {latestDigest ? (
           <Card>
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
@@ -201,7 +203,7 @@ export function DashboardContent({
               </p>
             </CardHeader>
           </Card>
-        ) : !digestingNow ? (
+        ) : (
           <Card>
             <CardContent className="py-12 text-center space-y-2">
               <div className="text-4xl mb-2">📬</div>
@@ -211,10 +213,10 @@ export function DashboardContent({
               </p>
             </CardContent>
           </Card>
-        ) : null}
+        )}
 
         {/* Email list */}
-        {sortedEmails.length > 0 && !digestingNow && (
+        {sortedEmails.length > 0 && (
           <div className="space-y-3">
             {sortedEmails.map((email) => (
               <EmailCard key={email.id} email={email} onBlock={handleBlockSender} />
