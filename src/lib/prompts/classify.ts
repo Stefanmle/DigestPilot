@@ -26,7 +26,14 @@ Classify each email. Return a JSON object mapping each email ID to an object wit
   - medium = reply within days, useful info from real person
   - low = FYI-only, no reply needed
 
-"category": "personal" | "work" | "newsletter" | "notification" | "spam" | "transactional"
+"category": one of:
+  - "personal" = from a real person you know, direct conversation (NOT mass emails)
+  - "work" = work-related from colleague/client/partner/supplier — direct business communication
+  - "newsletter" = mass emails, marketing, promotions, offers, digests, subscriptions — even if relevant to work. Key sign: sent to many people, not specifically to you
+  - "notification" = automated alerts from apps/services (social media, monitoring, etc.)
+  - "spam" = unsolicited junk
+  - "transactional" = receipts, confirmations, shipping, invoices
+  IMPORTANT: If an email has an "unsubscribe" link, promotional language, discount offers, or is clearly sent to a mailing list — it is "newsletter", NOT "personal" or "work"
 
 "action": the single best next step for the user:
   - "reply" = needs a response to a real person
