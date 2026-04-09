@@ -1,4 +1,15 @@
 {
+  "functions": {
+    "src/app/api/digest/process/[digestId]/route.ts": {
+      "maxDuration": 300
+    },
+    "src/app/api/digests/now/route.ts": {
+      "maxDuration": 30
+    },
+    "src/app/api/cron/digest/route.ts": {
+      "maxDuration": 30
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/digest",

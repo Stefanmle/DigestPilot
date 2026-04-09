@@ -8,6 +8,8 @@ import {
 import { processDigestEmails } from "@/lib/ai";
 import { matchReplies, getReplyPatterns } from "@/lib/reply-matcher";
 
+export const maxDuration = 300; // 5 minutes for AI processing
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ digestId: string }> }
