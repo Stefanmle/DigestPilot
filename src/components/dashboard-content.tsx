@@ -90,6 +90,23 @@ export function DashboardContent({
     window.location.href = "/";
   }
 
+  async function handleBlockSender(email: any, action: string) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const domain = email.from_email?.split("@")[1];
+    await fetch("/api/sender-filters", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session?.access_token}`,
+      },
+      body: JSON.stringify({
+        email_address: action === "spam" ? email.from_email : null,
+        email_domain: action === "trash" ? domain : null,
+        action,
+      }),
+    });
+  }
+
   const urgencyOrder = { high: 0, medium: 1, low: 2 };
   const sortedEmails = [...currentEmails].sort(
     (a, b) =>
@@ -200,7 +217,7 @@ export function DashboardContent({
         {sortedEmails.length > 0 && !digestingNow && (
           <div className="space-y-3">
             {sortedEmails.map((email) => (
-              <EmailCard key={email.id} email={email} />
+              <EmailCard key={email.id} email={email} onBlock={handleBlockSender} />
             ))}
           </div>
         )}

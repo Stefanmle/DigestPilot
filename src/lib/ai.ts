@@ -40,19 +40,25 @@ export async function processDigestEmails(
   let totalInputTokens = 0;
   let totalOutputTokens = 0;
 
-  // Step 1: Classify urgency + category (Haiku, batched)
+  // Step 1: Classify urgency + category (Haiku, batched) — ALL emails
   const classification = await classifyEmails(emails);
   totalInputTokens += classification.inputTokens;
   totalOutputTokens += classification.outputTokens;
 
-  // Step 2: Summarize + suggest replies (Sonnet, dynamic batching)
-  // Pass category info so summarizer knows which emails need replies
+  // Step 2: Separate emails by category
   const emailsWithCategory = emails.map((e) => ({
     ...e,
     category: classification.results[e.id]?.category ?? "personal",
   }));
 
-  const batches = createDynamicBatches(emailsWithCategory, 30000);
+  const needsAI = emailsWithCategory.filter(
+    (e) => !["newsletter", "notification", "spam", "transactional"].includes(e.category)
+  );
+  const skipAI = emailsWithCategory.filter(
+    (e) => ["newsletter", "notification", "spam", "transactional"].includes(e.category)
+  );
+
+  // Step 3: Only send personal/work emails to Sonnet (expensive model)
   const allSummaryResults: Array<{
     emailId: string;
     summary: string;
@@ -60,15 +66,35 @@ export async function processDigestEmails(
     emailBody: string;
   }> = [];
 
-  for (const batch of batches) {
-    const batchResults = await summarizeAndSuggestReplies(
-      batch,
-      replyPatterns,
-      detectedLanguage
-    );
-    totalInputTokens += batchResults.inputTokens;
-    totalOutputTokens += batchResults.outputTokens;
-    allSummaryResults.push(...batchResults.results);
+  if (needsAI.length > 0) {
+    const batches = createDynamicBatches(needsAI, 30000);
+    for (const batch of batches) {
+      const batchResults = await summarizeAndSuggestReplies(
+        batch,
+        replyPatterns,
+        detectedLanguage
+      );
+      totalInputTokens += batchResults.inputTokens;
+      totalOutputTokens += batchResults.outputTokens;
+      allSummaryResults.push(...batchResults.results);
+    }
+  }
+
+  // Step 4: Generate cheap summaries for newsletters/spam (no AI call — template-based)
+  for (const email of skipAI) {
+    const cat = email.category;
+    const summary =
+      cat === "spam" ? `Probable spam from ${email.from}.` :
+      cat === "newsletter" ? `Newsletter from ${email.from}: ${email.subject}` :
+      cat === "transactional" ? `Receipt/confirmation from ${email.from}.` :
+      `Notification from ${email.from}: ${email.subject}`;
+
+    allSummaryResults.push({
+      emailId: email.id,
+      summary,
+      suggestedReply: null,
+      emailBody: email.body,
+    });
   }
 
   // Combine results
@@ -81,10 +107,9 @@ export async function processDigestEmails(
     tokenEstimate: Math.ceil(r.emailBody.length / 4),
   }));
 
-  // Calculate cost (Haiku: $0.25/M in, $1.25/M out; Sonnet: $3/M in, $15/M out)
+  // Calculate cost
   const haikuCost =
-    (classification.inputTokens * 0.25 + classification.outputTokens * 1.25) /
-    1_000_000;
+    (classification.inputTokens * 0.25 + classification.outputTokens * 1.25) / 1_000_000;
   const sonnetInputTokens = totalInputTokens - classification.inputTokens;
   const sonnetOutputTokens = totalOutputTokens - classification.outputTokens;
   const sonnetCost =
@@ -154,6 +179,10 @@ async function summarizeAndSuggestReplies(
     "\n\n" +
     suggestReplyPrompt(replyPatterns, detectedLanguage);
 
+  if (!prompt.trim()) {
+    return { results: [], inputTokens: 0, outputTokens: 0 };
+  }
+
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-6",
     max_tokens: 8192,
@@ -200,7 +229,6 @@ async function summarizeAndSuggestReplies(
 }
 
 function parseJsonResponse(text: string): any {
-  // Claude sometimes wraps JSON in ```json ... ``` blocks
   const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   const cleaned = jsonMatch ? jsonMatch[1].trim() : text.trim();
   return JSON.parse(cleaned);
@@ -216,23 +244,15 @@ function createDynamicBatches<T extends EmailInput>(
 
   for (const email of emails) {
     const estimatedTokens = Math.ceil(email.body.length / 4);
-
-    if (
-      currentTokens + estimatedTokens > maxTokensPerBatch &&
-      currentBatch.length > 0
-    ) {
+    if (currentTokens + estimatedTokens > maxTokensPerBatch && currentBatch.length > 0) {
       batches.push(currentBatch);
       currentBatch = [];
       currentTokens = 0;
     }
-
     currentBatch.push(email);
     currentTokens += estimatedTokens;
   }
 
-  if (currentBatch.length > 0) {
-    batches.push(currentBatch);
-  }
-
+  if (currentBatch.length > 0) batches.push(currentBatch);
   return batches;
 }

@@ -25,9 +25,10 @@ const categoryConfig: Record<string, { label: string; className: string }> = {
   transactional: { label: "Receipt", className: "bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200" },
 };
 
-export function EmailCard({ email }: { email: DigestEmail }) {
+export function EmailCard({ email, onBlock }: { email: DigestEmail; onBlock?: (email: DigestEmail, action: string) => void }) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [blocked, setBlocked] = useState(false);
 
   const hasReply = email.suggested_reply && email.suggested_reply.length > 0;
   const isLowPriority = ["newsletter", "notification", "spam", "transactional"].includes(email.category ?? "");
@@ -118,6 +119,28 @@ export function EmailCard({ email }: { email: DigestEmail }) {
               </div>
             )}
           </div>
+        )}
+        {/* Block / Spam actions */}
+        {!blocked ? (
+          <div className="flex gap-2 pl-5 pt-1">
+            <button
+              className="text-[11px] text-muted-foreground hover:text-destructive transition-colors"
+              onClick={() => { setBlocked(true); onBlock?.(email, "spam"); }}
+            >
+              Mark as spam
+            </button>
+            <span className="text-[11px] text-muted-foreground/30">|</span>
+            <button
+              className="text-[11px] text-muted-foreground hover:text-destructive transition-colors"
+              onClick={() => { setBlocked(true); onBlock?.(email, "trash"); }}
+            >
+              Block sender
+            </button>
+          </div>
+        ) : (
+          <p className="text-[11px] text-muted-foreground pl-5 pt-1">
+            Sender blocked — won't appear in future digests.
+          </p>
         )}
       </CardContent>
     </Card>

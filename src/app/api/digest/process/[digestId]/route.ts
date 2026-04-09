@@ -115,6 +115,21 @@ export async function POST(
       }
     }
 
+    // Step 2.5: Filter out blocked senders
+    const { data: senderFilters } = await supabase
+      .from("sender_filters")
+      .select("email_address, email_domain, action")
+      .eq("user_id", digest.user_id);
+
+    const blockedEmails = new Set((senderFilters ?? []).map((f) => f.email_address?.toLowerCase()).filter(Boolean));
+    const blockedDomains = new Set((senderFilters ?? []).map((f) => f.email_domain?.toLowerCase()).filter(Boolean));
+
+    allEmails = allEmails.filter((e) => {
+      const email = e.fromEmail?.toLowerCase() ?? "";
+      const domain = email.split("@")[1] ?? "";
+      return !blockedEmails.has(email) && !blockedDomains.has(domain);
+    });
+
     // Step 3: AI processing
     if (allEmails.length > 0) {
       // Get reply patterns for few-shot learning
