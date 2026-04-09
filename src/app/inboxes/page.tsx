@@ -33,12 +33,9 @@ export default function InboxesPage() {
 
   function getStatusBadge(inbox: any) {
     if (!inbox.is_active) {
-      return <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Disconnected</span>;
+      return <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">Reconnect needed</span>;
     }
-    if (inbox.token_expires_at && new Date(inbox.token_expires_at) < new Date()) {
-      return <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">Token expired</span>;
-    }
-    return <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Connected</span>;
+    return <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">Connected</span>;
   }
 
   if (loading) {
