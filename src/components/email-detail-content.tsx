@@ -21,12 +21,12 @@ interface DigestEmail {
 
 export function EmailDetailContent({ email }: { email: DigestEmail }) {
   const router = useRouter();
-  const [replyText, setReplyText] = useState((email.suggested_reply ?? "").replace(/\\n/g, "\n"));
+  const [replyText, setReplyText] = useState(email.suggested_reply ?? "");
   const [copied, setCopied] = useState(false);
 
   const replySubject = `Re: ${email.subject ?? ""}`;
   const gmailWebUrl = `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(email.from_email ?? "")}&su=${encodeURIComponent(replySubject)}&body=${encodeURIComponent(replyText.slice(0, 1500))}`;
-  const mailtoUrl = `mailto:${encodeURIComponent(email.from_email ?? "")}?subject=${encodeURIComponent(replySubject)}&body=${encodeURIComponent(replyText.slice(0, 1500))}`;
+  const mailtoUrl = `mailto:${encodeURIComponent(email.from_email ?? "")}?subject=${encodeURIComponent(replySubject)}&body=${encodeURIComponent(replyText.slice(0, 1500).replace(/\n/g, "\r\n"))}`;
 
   async function copyReply() {
     await navigator.clipboard.writeText(replyText);

@@ -44,10 +44,10 @@ export async function sendDigestEmail(
       const action = email.recommended_action ?? "archive";
       const replySubject = `Re: ${email.subject ?? ""}`;
       const replyBody = email.suggested_reply?.slice(0, 1500) ?? "";
-      // Replace \n with actual newlines for proper encoding in mailto
-      const replyBodyFormatted = replyBody.replace(/\\n/g, "\n");
+      // Use %0D%0A for line breaks in mailto (required by iOS/RFC 6068)
+      const replyBodyMailto = replyBody.replace(/\n/g, "\r\n");
       const mailtoUrl = email.suggested_reply
-        ? `mailto:${encodeURIComponent(email.from_email ?? "")}?subject=${encodeURIComponent(replySubject)}&body=${encodeURIComponent(replyBodyFormatted)}`
+        ? `mailto:${encodeURIComponent(email.from_email ?? "")}?subject=${encodeURIComponent(replySubject)}&body=${encodeURIComponent(replyBodyMailto)}`
         : null;
       const editUrl = `${appUrl}/dashboard/${email.id}`;
       const replyTooLong =
