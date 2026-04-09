@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -13,6 +14,8 @@ interface DigestEmail {
   category: string | null;
   ai_summary: string | null;
   suggested_reply: string | null;
+  user_reply: string | null;
+  reply_matched_at: string | null;
   thread_id: string;
 }
 
@@ -26,12 +29,14 @@ const categoryConfig: Record<string, { label: string; className: string }> = {
 };
 
 export function EmailCard({ email, onBlock }: { email: DigestEmail; onBlock?: (email: DigestEmail, action: string) => void }) {
+  const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
   const [blocked, setBlocked] = useState(false);
 
   const hasReply = email.suggested_reply && email.suggested_reply.length > 0;
   const isLowPriority = ["newsletter", "notification", "spam", "transactional"].includes(email.category ?? "");
+  const wasReplied = !!email.user_reply || !!email.reply_matched_at;
 
   const replySubject = `Re: ${email.subject ?? ""}`;
   const replyBody = email.suggested_reply?.slice(0, 1500) ?? "";
@@ -52,12 +57,15 @@ export function EmailCard({ email, onBlock }: { email: DigestEmail; onBlock?: (e
   }
 
   return (
-    <Card className={`transition-opacity ${isLowPriority ? "opacity-60 hover:opacity-100" : ""}`}>
+    <Card className={`transition-all hover:shadow-md ${isLowPriority ? "opacity-60 hover:opacity-100" : ""} ${wasReplied ? "border-l-2 border-l-emerald-400" : ""}`}>
       <CardContent className="p-4 space-y-2.5">
-        {/* Header */}
-        <div className="flex items-start gap-3">
+        {/* Header — tappable to open detail */}
+        <div
+          className="flex items-start gap-3 cursor-pointer"
+          onClick={() => router.push(`/dashboard/${email.id}`)}
+        >
           <div className={`mt-1 h-2.5 w-2.5 rounded-full shrink-0 ${
-            email.urgency === "high" ? "bg-red-500" :
+            email.urgency === "high" ? "bg-red-500 shadow-sm shadow-red-200" :
             email.urgency === "medium" ? "bg-amber-400" : "bg-zinc-300"
           }`} />
           <div className="flex-1 min-w-0">
@@ -70,11 +78,20 @@ export function EmailCard({ email, onBlock }: { email: DigestEmail; onBlock?: (e
                   {categoryConfig[email.category].label}
                 </span>
               )}
+              {wasReplied && (
+                <span className="text-[10px] leading-none px-1.5 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200 flex items-center gap-0.5">
+                  <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" /></svg>
+                  Replied
+                </span>
+              )}
             </div>
             <p className="text-[13px] text-muted-foreground truncate mt-0.5">
               {email.subject}
             </p>
           </div>
+          <svg className="w-4 h-4 text-muted-foreground/40 shrink-0 mt-1" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+          </svg>
         </div>
 
         {/* AI Summary */}
@@ -84,13 +101,23 @@ export function EmailCard({ email, onBlock }: { email: DigestEmail; onBlock?: (e
           </p>
         )}
 
+        {/* User's actual reply (if detected) */}
+        {wasReplied && email.user_reply && (
+          <div className="pl-5">
+            <div className="rounded-lg bg-emerald-50/50 border border-emerald-100 p-3 text-[12px] text-emerald-800 leading-relaxed">
+              <p className="text-[10px] uppercase tracking-wider text-emerald-600 font-medium mb-1">Your reply</p>
+              <p className="whitespace-pre-wrap">{email.user_reply.slice(0, 200)}{email.user_reply.length > 200 ? "..." : ""}</p>
+            </div>
+          </div>
+        )}
+
         {/* Suggested Reply */}
-        {hasReply && (
+        {hasReply && !wasReplied && (
           <div className="pl-5">
             <button
               type="button"
               className="text-[13px] font-medium text-primary hover:text-primary/80 transition-colors"
-              onClick={() => setExpanded(!expanded)}
+              onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
             >
               {expanded ? "Hide reply ↑" : "Show suggested reply ↓"}
             </button>
@@ -103,16 +130,16 @@ export function EmailCard({ email, onBlock }: { email: DigestEmail; onBlock?: (e
 
                 <div className="flex gap-2">
                   {mailtoUrl && (
-                    <a href={mailtoUrl} className="flex-1 inline-flex items-center justify-center rounded-lg bg-primary px-3 py-2 text-[13px] font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+                    <a href={mailtoUrl} onClick={(e) => e.stopPropagation()} className="flex-1 inline-flex items-center justify-center rounded-lg bg-primary px-3 py-2 text-[13px] font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
                       Reply in app
                     </a>
                   )}
                   {gmailWebUrl && (
-                    <a href={gmailWebUrl} target="_blank" rel="noopener" className="flex-1 inline-flex items-center justify-center rounded-lg border border-input bg-background px-3 py-2 text-[13px] font-medium hover:bg-accent transition-colors">
+                    <a href={gmailWebUrl} target="_blank" rel="noopener" onClick={(e) => e.stopPropagation()} className="flex-1 inline-flex items-center justify-center rounded-lg border border-input bg-background px-3 py-2 text-[13px] font-medium hover:bg-accent transition-colors">
                       Reply in web
                     </a>
                   )}
-                  <Button size="sm" variant="ghost" className="shrink-0 text-[13px]" onClick={copyReply}>
+                  <Button size="sm" variant="ghost" className="shrink-0 text-[13px]" onClick={(e) => { e.stopPropagation(); copyReply(); }}>
                     {copied ? "Copied!" : "Copy"}
                   </Button>
                 </div>
@@ -120,19 +147,20 @@ export function EmailCard({ email, onBlock }: { email: DigestEmail; onBlock?: (e
             )}
           </div>
         )}
+
         {/* Block / Spam actions */}
         {!blocked ? (
           <div className="flex gap-2 pl-5 pt-1">
             <button
               className="text-[11px] text-muted-foreground hover:text-destructive transition-colors"
-              onClick={() => { setBlocked(true); onBlock?.(email, "spam"); }}
+              onClick={(e) => { e.stopPropagation(); setBlocked(true); onBlock?.(email, "spam"); }}
             >
               Mark as spam
             </button>
             <span className="text-[11px] text-muted-foreground/30">|</span>
             <button
               className="text-[11px] text-muted-foreground hover:text-destructive transition-colors"
-              onClick={() => { setBlocked(true); onBlock?.(email, "trash"); }}
+              onClick={(e) => { e.stopPropagation(); setBlocked(true); onBlock?.(email, "trash"); }}
             >
               Block sender
             </button>
