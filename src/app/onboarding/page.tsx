@@ -30,6 +30,7 @@ function OnboardingContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasInbox, setHasInbox] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
 
   useEffect(() => {
     const stepParam = searchParams.get("step");
@@ -41,6 +42,10 @@ function OnboardingContent() {
 
     if (stepParam === "consent") { setStep("consent"); setHasInbox(true); }
     checkInbox();
+    // Get user email
+    createBrowserClient().auth.getUser().then(({ data: { user } }) => {
+      if (user) setUserEmail(user.email ?? null);
+    });
   }, [searchParams]);
 
   async function checkInbox() {
@@ -72,20 +77,30 @@ function OnboardingContent() {
 
   async function handleSchedule(preset: typeof PRESETS[number]) {
     setLoading(true);
+    const sb = createBrowserClient();
+    const { data: { session } } = await sb.auth.getSession();
+    const authHeaders = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session?.access_token}`,
+    };
+
     await fetch("/api/schedules", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ label: preset.label, time: preset.time, days: [...preset.days] }),
     });
     if ("extra" in preset && preset.extra) {
       await fetch("/api/schedules", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders,
         body: JSON.stringify({ label: "Evening digest", time: preset.extra.time, days: [...preset.extra.days] }),
       });
     }
     setStep("preview");
-    await fetch("/api/digests/now", { method: "POST" });
+    await fetch("/api/digests/now", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${session?.access_token}` },
+    });
     setLoading(false);
   }
 
@@ -104,9 +119,14 @@ function OnboardingContent() {
           ))}
         </div>
 
-        <p className="text-center text-xs text-muted-foreground">
-          Step {currentStepIndex + 1} of 4
-        </p>
+        <div className="text-center space-y-1">
+          {userEmail && (
+            <p className="text-xs text-muted-foreground">Signed in as {userEmail}</p>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Step {currentStepIndex + 1} of 4
+          </p>
+        </div>
 
         {/* Step 1: Connect Gmail */}
         {step === "connect" && (

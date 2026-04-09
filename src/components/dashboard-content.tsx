@@ -29,6 +29,21 @@ export function DashboardContent({
 
   const latestDigest = currentDigests[selectedDigestIndex];
 
+  async function loadEmailsForDigest(digestId: string) {
+    const { data: emails } = await supabase
+      .from("digest_emails")
+      .select("*")
+      .eq("digest_id", digestId)
+      .order("urgency", { ascending: true });
+    setCurrentEmails(emails ?? []);
+  }
+
+  async function selectDigest(index: number) {
+    setSelectedDigestIndex(index);
+    const digest = currentDigests[index];
+    if (digest) await loadEmailsForDigest(digest.id);
+  }
+
   async function handleDigestNow() {
     setDigestingNow(true);
     setDigestStatus("Connecting to your inbox...");
@@ -236,7 +251,7 @@ export function DashboardContent({
                   key={d.id}
                   size="sm"
                   variant={i === selectedDigestIndex ? "default" : "outline"}
-                  onClick={() => setSelectedDigestIndex(i)}
+                  onClick={() => selectDigest(i)}
                   className="whitespace-nowrap text-xs"
                 >
                   {new Date(d.created_at).toLocaleDateString("en-US", {

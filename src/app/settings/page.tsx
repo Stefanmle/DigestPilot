@@ -18,44 +18,52 @@ export default function SettingsPage() {
   useEffect(() => { loadData(); }, []);
 
   async function loadData() {
-    const supabase = createBrowserClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const sb = createBrowserClient();
+    const { data: { user } } = await sb.auth.getUser();
     if (!user) { router.push("/"); return; }
     setUser(user);
 
-    const { data: profile } = await supabase.from("users").select("*").eq("id", user.id).single();
+    const { data: profile } = await sb.from("users").select("*").eq("id", user.id).single();
     setUserProfile(profile);
 
-    const res = await fetch("/api/schedules");
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch("/api/schedules", {
+      headers: { Authorization: `Bearer ${session?.access_token}` },
+    });
     if (res.ok) setSchedules(await res.json());
     setLoading(false);
   }
 
   async function handleDeleteSchedule(id: string) {
-    await fetch(`/api/schedules?id=${id}`, { method: "DELETE" });
+    const sb = createBrowserClient();
+    const { data: { session } } = await sb.auth.getSession();
+    await fetch(`/api/schedules?id=${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${session?.access_token}` },
+    });
     setSchedules(schedules.filter((s) => s.id !== id));
   }
 
   async function handleWithdrawConsent() {
     if (!confirm("This will disconnect all your inboxes and stop digest generation. Continue?")) return;
-    const supabase = createBrowserClient();
-    await supabase.from("users").update({ consent_given_at: null, consent_version: null }).eq("id", user.id);
-    await supabase.from("inboxes").update({ is_active: false }).eq("user_id", user.id);
+    const sb = createBrowserClient();
+    await sb.from("users").update({ consent_given_at: null, consent_version: null }).eq("id", user.id);
+    await sb.from("inboxes").update({ is_active: false }).eq("user_id", user.id);
     loadData();
   }
 
   async function handleDeleteAccount() {
     if (!confirm("This will permanently delete all your data. This cannot be undone.")) return;
     if (!confirm("Are you sure? All digests, inboxes, and reply patterns will be deleted.")) return;
-    const supabase = createBrowserClient();
-    await supabase.from("users").delete().eq("id", user.id);
-    await supabase.auth.signOut();
+    const sb = createBrowserClient();
+    await sb.from("users").delete().eq("id", user.id);
+    await sb.auth.signOut();
     window.location.href = "/";
   }
 
   async function handleSignOut() {
-    const supabase = createBrowserClient();
-    await supabase.auth.signOut();
+    const sb = createBrowserClient();
+    await sb.auth.signOut();
     window.location.href = "/";
   }
 
