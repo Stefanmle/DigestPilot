@@ -168,6 +168,8 @@ export async function POST(
           category: result.category,
           ai_summary: result.summary,
           suggested_reply: result.suggestedReply,
+          recommended_action: result.recommendedAction,
+          action_data: result.actionData,
         });
       }
     }

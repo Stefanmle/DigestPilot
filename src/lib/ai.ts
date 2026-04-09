@@ -28,6 +28,8 @@ interface DigestResult {
   summary: string;
   suggestedReply: string | null;
   tokenEstimate: number;
+  recommendedAction: string;
+  actionData: Record<string, any> | null;
 }
 
 export async function processDigestEmails(
@@ -98,14 +100,19 @@ export async function processDigestEmails(
   }
 
   // Combine results
-  const results: DigestResult[] = allSummaryResults.map((r) => ({
-    emailId: r.emailId,
-    urgency: classification.results[r.emailId]?.urgency ?? "low",
-    category: classification.results[r.emailId]?.category ?? "personal",
-    summary: r.summary,
-    suggestedReply: r.suggestedReply,
-    tokenEstimate: Math.ceil(r.emailBody.length / 4),
-  }));
+  const results: DigestResult[] = allSummaryResults.map((r) => {
+    const cls = classification.results[r.emailId];
+    return {
+      emailId: r.emailId,
+      urgency: cls?.urgency ?? "low",
+      category: cls?.category ?? "personal",
+      summary: r.summary,
+      suggestedReply: r.suggestedReply,
+      tokenEstimate: Math.ceil(r.emailBody.length / 4),
+      recommendedAction: cls?.action ?? "archive",
+      actionData: cls?.event ?? null,
+    };
+  });
 
   // Calculate cost
   const haikuCost =
@@ -122,7 +129,7 @@ export async function processDigestEmails(
 async function classifyEmails(
   emails: EmailInput[]
 ): Promise<{
-  results: Record<string, { urgency: "low" | "medium" | "high"; category: string }>;
+  results: Record<string, { urgency: "low" | "medium" | "high"; category: string; action: string; event?: Record<string, any> }>;
   inputTokens: number;
   outputTokens: number;
 }> {
@@ -130,26 +137,30 @@ async function classifyEmails(
 
   const response = await anthropic.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 2048,
+    max_tokens: 4096,
     messages: [{ role: "user", content: prompt }],
   });
 
   const text =
     response.content[0].type === "text" ? response.content[0].text : "";
 
-  const results: Record<string, { urgency: "low" | "medium" | "high"; category: string }> = {};
+  const validActions = ["reply", "calendar", "follow_up", "archive", "spam", "unsubscribe"];
+  const results: Record<string, { urgency: "low" | "medium" | "high"; category: string; action: string; event?: Record<string, any> }> = {};
   try {
     const parsed = parseJsonResponse(text);
     for (const [id, val] of Object.entries(parsed)) {
       const v = val as any;
+      const action = validActions.includes(v.action) ? v.action : "archive";
       results[id] = {
         urgency: ["high", "medium", "low"].includes(v.urgency) ? v.urgency : "medium",
         category: v.category ?? "personal",
+        action,
+        ...(action === "calendar" && v.event ? { event: v.event } : {}),
       };
     }
   } catch {
     for (const email of emails) {
-      results[email.id] = { urgency: "medium", category: "personal" };
+      results[email.id] = { urgency: "medium", category: "personal", action: "archive" };
     }
   }
 

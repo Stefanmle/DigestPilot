@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { googleCalendarUrl } from "@/lib/calendar";
 
 interface DigestEmail {
   id: string;
@@ -17,6 +18,8 @@ interface DigestEmail {
   user_reply: string | null;
   reply_matched_at: string | null;
   thread_id: string;
+  recommended_action: string | null;
+  action_data: Record<string, any> | null;
 }
 
 const categoryConfig: Record<string, { label: string; className: string }> = {
@@ -28,6 +31,15 @@ const categoryConfig: Record<string, { label: string; className: string }> = {
   transactional: { label: "Receipt", className: "bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200/60" },
 };
 
+const actionConfig: Record<string, { label: string; icon: string; className: string }> = {
+  reply: { label: "Reply", icon: "reply", className: "bg-primary text-primary-foreground hover:bg-primary/90" },
+  calendar: { label: "Add to calendar", icon: "calendar", className: "bg-blue-600 text-white hover:bg-blue-700" },
+  follow_up: { label: "Follow up later", icon: "clock", className: "bg-amber-500 text-white hover:bg-amber-600" },
+  archive: { label: "Archive", icon: "archive", className: "bg-zinc-100 text-zinc-600 hover:bg-zinc-200" },
+  spam: { label: "Mark as spam", icon: "spam", className: "bg-red-100 text-red-600 hover:bg-red-200" },
+  unsubscribe: { label: "Unsubscribe", icon: "unsubscribe", className: "bg-zinc-100 text-zinc-600 hover:bg-zinc-200" },
+};
+
 export function EmailCard({ email, onBlock }: { email: DigestEmail; onBlock?: (email: DigestEmail, action: string) => void }) {
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
@@ -37,6 +49,7 @@ export function EmailCard({ email, onBlock }: { email: DigestEmail; onBlock?: (e
   const hasReply = email.suggested_reply && email.suggested_reply.length > 0;
   const isLowPriority = ["newsletter", "notification", "spam", "transactional"].includes(email.category ?? "");
   const wasReplied = !!email.user_reply || !!email.reply_matched_at;
+  const action = email.recommended_action ?? (hasReply ? "reply" : "archive");
 
   const replySubject = `Re: ${email.subject ?? ""}`;
   const replyBody = email.suggested_reply?.slice(0, 1500) ?? "";
@@ -48,12 +61,66 @@ export function EmailCard({ email, onBlock }: { email: DigestEmail; onBlock?: (e
     ? `mailto:${encodeURIComponent(email.from_email ?? "")}?subject=${encodeURIComponent(replySubject)}&body=${encodeURIComponent(replyBody)}`
     : null;
 
+  const calendarLink = action === "calendar" && email.action_data
+    ? googleCalendarUrl(email.action_data as any)
+    : null;
+
   async function copyReply() {
     if (email.suggested_reply) {
       await navigator.clipboard.writeText(email.suggested_reply);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
+  }
+
+  function renderActionButton() {
+    const config = actionConfig[action];
+    if (!config) return null;
+
+    if (action === "reply" && hasReply && !wasReplied) {
+      // Reply action — show toggle for suggested reply
+      return null; // Handled by the existing reply expansion below
+    }
+
+    if (action === "calendar" && calendarLink) {
+      return (
+        <a
+          href={calendarLink}
+          target="_blank"
+          rel="noopener"
+          onClick={(e) => e.stopPropagation()}
+          className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-[13px] font-medium transition-colors ${config.className}`}
+        >
+          <CalendarIcon className="w-3.5 h-3.5" />
+          {config.label}
+          {email.action_data?.start && (
+            <span className="opacity-80 text-[11px] ml-1">
+              {new Date(email.action_data.start).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+            </span>
+          )}
+        </a>
+      );
+    }
+
+    if (action === "spam") {
+      return (
+        <button
+          onClick={(e) => { e.stopPropagation(); setBlocked(true); onBlock?.(email, "spam"); }}
+          className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-[13px] font-medium transition-colors ${config.className}`}
+        >
+          {config.label}
+        </button>
+      );
+    }
+
+    // For archive, follow_up, unsubscribe — show as subtle label
+    return (
+      <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+        {action === "follow_up" && <ClockIcon className="w-3 h-3" />}
+        {action === "archive" && <ArchiveIcon className="w-3 h-3" />}
+        {config.label}
+      </span>
+    );
   }
 
   return (
@@ -101,6 +168,13 @@ export function EmailCard({ email, onBlock }: { email: DigestEmail; onBlock?: (e
           </p>
         )}
 
+        {/* Smart Action Button */}
+        {!wasReplied && !blocked && (
+          <div className="pl-5">
+            {renderActionButton()}
+          </div>
+        )}
+
         {/* User's actual reply (if detected) */}
         {wasReplied && email.user_reply && (
           <div className="pl-5">
@@ -111,7 +185,7 @@ export function EmailCard({ email, onBlock }: { email: DigestEmail; onBlock?: (e
           </div>
         )}
 
-        {/* Suggested Reply */}
+        {/* Suggested Reply (for reply action or when reply exists) */}
         {hasReply && !wasReplied && (
           <div className="pl-5">
             <button
@@ -175,5 +249,29 @@ export function EmailCard({ email, onBlock }: { email: DigestEmail; onBlock?: (e
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function CalendarIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+    </svg>
+  );
+}
+
+function ClockIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+    </svg>
+  );
+}
+
+function ArchiveIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
+    </svg>
   );
 }
