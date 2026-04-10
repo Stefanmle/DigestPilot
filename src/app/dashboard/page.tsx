@@ -5,6 +5,7 @@ import { createBrowserClient } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { AppLayout } from "@/components/app-layout";
 import { DashboardContent } from "@/components/dashboard-content";
+import { isAllowedEmail } from "@/lib/allowlist";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -19,6 +20,7 @@ export default function DashboardPage() {
     const supabase = createBrowserClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push("/"); return; }
+    if (!isAllowedEmail(user.email ?? "")) { router.push("/request-access"); return; }
     setUser(user);
 
     const { data: digestsData } = await supabase

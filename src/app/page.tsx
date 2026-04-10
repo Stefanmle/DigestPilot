@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import { isAllowedEmail } from "@/lib/allowlist";
 
 export default function LandingPage() {
   const [showLogin, setShowLogin] = useState(false);
@@ -23,12 +24,22 @@ export default function LandingPage() {
   useEffect(() => {
     const supabase = getSupabase();
     supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session) {
-        window.location.href = "/onboarding";
+      if (event === "SIGNED_IN" && session?.user?.email) {
+        if (isAllowedEmail(session.user.email)) {
+          window.location.href = "/onboarding";
+        } else {
+          window.location.href = "/request-access";
+        }
       }
     });
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) window.location.href = "/dashboard";
+      if (user?.email) {
+        if (isAllowedEmail(user.email)) {
+          window.location.href = "/dashboard";
+        } else {
+          window.location.href = "/request-access";
+        }
+      }
     });
   }, []);
 
