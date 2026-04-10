@@ -199,8 +199,8 @@ export async function POST(
         .eq("id", digest.user_id)
         .single();
 
-      if (user?.email) {
-        // Send digest email via Resend (imported dynamically to avoid loading if not needed)
+      if (user?.email && allEmails.length > 0) {
+        // Only send email when there are actual emails to report
         const { sendDigestEmail } = await import("@/lib/email-sender");
 
         const { data: digestEmailRows } = await supabase
