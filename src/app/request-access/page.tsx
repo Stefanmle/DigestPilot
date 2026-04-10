@@ -45,7 +45,14 @@ export default function RequestAccessPage() {
           {!requested ? (
             <Button
               className="w-full rounded-xl"
-              onClick={() => setRequested(true)}
+              onClick={async () => {
+                await fetch("/api/admin/request-access", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ email }),
+                });
+                setRequested(true);
+              }}
             >
               Request access
             </Button>
