@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { classifyUrgencyPrompt } from "./prompts/classify";
 import { summarizePrompt } from "./prompts/summarize";
 import { suggestReplyPrompt } from "./prompts/suggest-reply";
+import { detectCommitmentsPrompt, checkResolvedPrompt } from "./prompts/commitments";
 
 const anthropic = new Anthropic();
 
@@ -281,4 +282,95 @@ function createDynamicBatches<T extends EmailInput>(
 
   if (currentBatch.length > 0) batches.push(currentBatch);
   return batches;
+}
+
+// --- Commitment Detection ---
+
+interface SentEmailForCommitment {
+  id: string;
+  to: string;
+  toEmail: string;
+  subject: string;
+  body: string;
+  threadId: string;
+}
+
+export interface DetectedCommitment {
+  emailId: string;
+  threadId: string;
+  toName: string;
+  toEmail: string;
+  title: string;
+  description: string;
+  type: string;
+  dueAt: string | null;
+}
+
+export async function detectCommitments(
+  sentEmails: SentEmailForCommitment[]
+): Promise<DetectedCommitment[]> {
+  if (sentEmails.length === 0) return [];
+
+  const today = new Date().toISOString().slice(0, 10);
+  const allCommitments: DetectedCommitment[] = [];
+
+  // Batch sent emails (max ~10 per call)
+  const batchSize = 10;
+  for (let i = 0; i < sentEmails.length; i += batchSize) {
+    const batch = sentEmails.slice(i, i + batchSize);
+    const prompt = detectCommitmentsPrompt(batch, today);
+
+    try {
+      const response = await anthropic.messages.create({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 4096,
+        messages: [{ role: "user", content: prompt }],
+      });
+
+      const text = response.content[0].type === "text" ? response.content[0].text : "";
+      const parsed = parseJsonResponse(text);
+
+      if (Array.isArray(parsed)) {
+        for (const c of parsed) {
+          allCommitments.push({
+            emailId: c.emailId,
+            threadId: c.threadId,
+            toName: c.to_name ?? "",
+            toEmail: c.to_email ?? "",
+            title: c.title ?? "",
+            description: c.description ?? "",
+            type: ["call", "meeting", "deliver", "follow_up", "reply"].includes(c.type) ? c.type : "follow_up",
+            dueAt: c.due_at ?? null,
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Commitment detection batch failed:", err);
+    }
+  }
+
+  return allCommitments;
+}
+
+export async function checkCommitmentResolved(
+  commitment: { title: string; description: string; to_email: string; created_at: string },
+  threadEmails: { from: string; to: string; subject: string; body: string }[]
+): Promise<{ resolved: boolean; reason: string }> {
+  if (threadEmails.length === 0) return { resolved: false, reason: "No new emails in thread" };
+
+  const prompt = checkResolvedPrompt(commitment, threadEmails);
+
+  try {
+    const response = await anthropic.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 256,
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const text = response.content[0].type === "text" ? response.content[0].text : "";
+    const parsed = parseJsonResponse(text);
+    return { resolved: !!parsed.resolved, reason: parsed.reason ?? "" };
+  } catch {
+    return { resolved: false, reason: "Check failed" };
+  }
 }

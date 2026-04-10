@@ -5,7 +5,7 @@ import {
   fetchNewEmails,
   fetchSentEmails,
 } from "@/lib/gmail";
-import { processDigestEmails } from "@/lib/ai";
+import { processDigestEmails, detectCommitments, checkCommitmentResolved } from "@/lib/ai";
 import { matchReplies, getReplyPatterns } from "@/lib/reply-matcher";
 
 export const maxDuration = 300; // 5 minutes for AI processing
@@ -75,6 +75,34 @@ export async function POST(
 
         if (sentMessages.length > 0) {
           await matchReplies(supabase, digest.user_id, sentMessages, inbox.id);
+
+          // Step 1b: Detect commitments from sent emails
+          try {
+            const commitments = await detectCommitments(sentMessages);
+            const defaultDue = new Date();
+            defaultDue.setDate(defaultDue.getDate() + 3); // 3-day default
+
+            for (const c of commitments) {
+              await supabase.from("commitments").upsert({
+                user_id: digest.user_id,
+                thread_id: c.threadId,
+                sent_email_external_id: c.emailId,
+                to_name: c.toName,
+                to_email: c.toEmail,
+                title: c.title,
+                description: c.description,
+                commitment_type: c.type,
+                due_at: c.dueAt || defaultDue.toISOString(),
+                status: "pending",
+              }, { onConflict: "user_id,thread_id,title" });
+            }
+
+            if (commitments.length > 0) {
+              console.log(`Detected ${commitments.length} commitments from sent emails`);
+            }
+          } catch (err) {
+            console.error("Commitment detection failed:", err);
+          }
         }
 
         // Update sent sync cursor
@@ -117,7 +145,60 @@ export async function POST(
       }
     }
 
-    // Step 2.5: Filter out blocked senders
+    // Step 2.5: Auto-resolve commitments + mark overdue
+    try {
+      // Mark overdue commitments
+      await supabase
+        .from("commitments")
+        .update({ status: "overdue" })
+        .eq("user_id", digest.user_id)
+        .eq("status", "pending")
+        .lt("due_at", new Date().toISOString());
+
+      // Check pending commitments for auto-resolve (simple: new sent email in same thread)
+      const { data: pendingCommitments } = await supabase
+        .from("commitments")
+        .select("*")
+        .eq("user_id", digest.user_id)
+        .in("status", ["pending", "overdue"]);
+
+      if (pendingCommitments && pendingCommitments.length > 0) {
+        // Get all recent sent messages across all inboxes (already fetched above)
+        // Check if any sent message is in a commitment's thread and was sent after the commitment
+        for (const commitment of pendingCommitments) {
+          const matchingSent = allEmails.filter(
+            (e) => e.threadId === commitment.thread_id
+          );
+          if (matchingSent.length > 0) {
+            // New activity in this thread — use AI to check if resolved
+            const result = await checkCommitmentResolved(
+              commitment,
+              matchingSent.map((e) => ({
+                from: e.from ?? "",
+                to: e.fromEmail ?? "",
+                subject: e.subject ?? "",
+                body: e.body ?? "",
+              }))
+            );
+            if (result.resolved) {
+              await supabase
+                .from("commitments")
+                .update({
+                  status: "auto_resolved",
+                  resolved_at: new Date().toISOString(),
+                  resolved_by: "auto",
+                })
+                .eq("id", commitment.id);
+              console.log(`Auto-resolved commitment: ${commitment.title}`);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Commitment auto-resolve failed:", err);
+    }
+
+    // Step 2.6: Filter out blocked senders
     const { data: senderFilters } = await supabase
       .from("sender_filters")
       .select("email_address, email_domain, action")
@@ -199,8 +280,7 @@ export async function POST(
         .eq("id", digest.user_id)
         .single();
 
-      if (user?.email && allEmails.length > 0) {
-        // Only send email when there are actual emails to report
+      if (user?.email) {
         const { sendDigestEmail } = await import("@/lib/email-sender");
 
         const { data: digestEmailRows } = await supabase
@@ -209,7 +289,18 @@ export async function POST(
           .eq("digest_id", digestId)
           .order("urgency", { ascending: true });
 
-        await sendDigestEmail(user.email, digestEmailRows ?? [], digestId);
+        // Fetch active commitments for the email
+        const { data: activeCommitments } = await supabase
+          .from("commitments")
+          .select("*")
+          .eq("user_id", digest.user_id)
+          .in("status", ["pending", "overdue"])
+          .order("due_at", { ascending: true });
+
+        // Only send if there are emails OR commitments to report
+        if ((digestEmailRows && digestEmailRows.length > 0) || (activeCommitments && activeCommitments.length > 0)) {
+          await sendDigestEmail(user.email, digestEmailRows ?? [], digestId, activeCommitments ?? []);
+        }
 
         await supabase
           .from("digests")

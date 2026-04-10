@@ -190,7 +190,7 @@ export async function fetchSentEmails(
   oauth2Client: InstanceType<typeof google.auth.OAuth2>,
   sentSyncCursor?: string | null
 ): Promise<{
-  sentMessages: Array<{ threadId: string; body: string }>;
+  sentMessages: Array<{ id: string; threadId: string; to: string; toEmail: string; subject: string; body: string }>;
   newSentSyncCursor: string;
 }> {
   const gmail = google.gmail({ version: "v1", auth: oauth2Client });
@@ -232,7 +232,7 @@ export async function fetchSentEmails(
 
   messageIds = [...new Set(messageIds.filter(Boolean))].slice(0, 50);
 
-  const sentMessages: Array<{ threadId: string; body: string }> = [];
+  const sentMessages: Array<{ id: string; threadId: string; to: string; toEmail: string; subject: string; body: string }> = [];
   for (const msgId of messageIds) {
     try {
       const msg = await gmail.users.messages.get({
@@ -241,10 +241,22 @@ export async function fetchSentEmails(
         format: "full",
       });
 
+      const headers = msg.data.payload?.headers ?? [];
+      const toHeader = headers.find((h: any) => h.name?.toLowerCase() === "to")?.value ?? "";
+      const subject = headers.find((h: any) => h.name?.toLowerCase() === "subject")?.value ?? "";
       const body = extractBodyText(msg.data.payload);
 
+      // Parse "Name <email>" format
+      const toMatch = toHeader.match(/^(.+?)\s*<(.+?)>$/);
+      const toName = toMatch ? toMatch[1].trim().replace(/"/g, "") : toHeader;
+      const toEmail = toMatch ? toMatch[2] : toHeader;
+
       sentMessages.push({
+        id: msg.data.id ?? msgId,
         threadId: msg.data.threadId ?? "",
+        to: toName,
+        toEmail,
+        subject,
         body: body.slice(0, 4000),
       });
     } catch {

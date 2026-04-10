@@ -5,6 +5,7 @@ import { createBrowserClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmailCard } from "@/components/email-card";
+import { CommitmentsSection } from "@/components/commitments-section";
 import type { User } from "@supabase/supabase-js";
 
 interface DashboardContentProps {
@@ -242,6 +243,9 @@ export function DashboardContent({
           </CardContent>
         </Card>
       )}
+
+      {/* Commitments */}
+      <CommitmentsSection userId={user.id} />
 
       {/* Email list */}
       {sortedEmails.length > 0 && (

@@ -16,10 +16,21 @@ interface DigestEmailRow {
   action_data: Record<string, any> | null;
 }
 
+interface CommitmentRow {
+  id: string;
+  title: string;
+  description: string | null;
+  commitment_type: string;
+  due_at: string | null;
+  status: string;
+  to_name: string | null;
+}
+
 export async function sendDigestEmail(
   to: string,
   emails: DigestEmailRow[],
-  digestId: string
+  digestId: string,
+  commitments: CommitmentRow[] = []
 ): Promise<void> {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const urgentCount = emails.filter((e) => e.urgency === "high").length;
@@ -131,6 +142,7 @@ export async function sendDigestEmail(
     <p style="font-size: 13px; color: #6b7280; margin: 0 0 20px; text-align: center;">
       ${urgentCount > 0 ? `${urgentCount} urgent · ` : ""}${calendarCount > 0 ? `${calendarCount} calendar event${calendarCount !== 1 ? "s" : ""} · ` : ""}${new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
     </p>
+    ${buildCommitmentsHtml(commitments, appUrl)}
     ${emailCards}
     <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e7eb; text-align: center;">
       <a href="${appUrl}/dashboard" style="display: inline-block; background: #111; color: #fff; padding: 10px 24px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; margin-bottom: 12px;">Open dashboard</a>
@@ -185,6 +197,98 @@ function formatEventTime(start: string, end?: string): string {
     return `${dateStr}, ${timeStr} – ${endTime}`;
   }
   return `${dateStr}, ${timeStr}`;
+}
+
+function buildCommitmentsHtml(commitments: CommitmentRow[], appUrl: string): string {
+  if (commitments.length === 0) return "";
+
+  const now = new Date();
+  const hour = now.getHours();
+  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+  const tomorrowEnd = new Date(todayEnd.getTime() + 86400000);
+
+  // Time-smart filtering
+  let relevantCommitments: CommitmentRow[];
+  let sectionTitle: string;
+
+  if (hour < 12) {
+    // Morning: show today + overdue
+    relevantCommitments = commitments.filter((c) => {
+      if (c.status === "overdue") return true;
+      if (!c.due_at) return true;
+      return new Date(c.due_at) <= todayEnd;
+    });
+    sectionTitle = "Your commitments today";
+  } else if (hour < 17) {
+    // Afternoon: show rest of today + tomorrow
+    relevantCommitments = commitments.filter((c) => {
+      if (c.status === "overdue") return true;
+      if (!c.due_at) return true;
+      return new Date(c.due_at) <= tomorrowEnd;
+    });
+    sectionTitle = "Commitments — today & tomorrow";
+  } else {
+    // Evening: show tomorrow + overdue
+    relevantCommitments = commitments.filter((c) => {
+      if (c.status === "overdue") return true;
+      if (!c.due_at) return true;
+      const d = new Date(c.due_at);
+      return d <= tomorrowEnd;
+    });
+    sectionTitle = "Commitments for tomorrow";
+  }
+
+  // Always show overdue regardless of time
+  const overdueOnly = commitments.filter((c) => c.status === "overdue" && !relevantCommitments.includes(c));
+  relevantCommitments = [...relevantCommitments, ...overdueOnly];
+
+  if (relevantCommitments.length === 0) return "";
+
+  const typeIcon: Record<string, string> = {
+    call: "📞", meeting: "🤝", deliver: "📦", follow_up: "🔄", reply: "💬",
+  };
+
+  const commitmentCards = relevantCommitments.map((c) => {
+    const icon = typeIcon[c.commitment_type] || "📌";
+    const isOverdue = c.status === "overdue" || (c.due_at && new Date(c.due_at) < now);
+    const doneUrl = `${appUrl}/api/commitments/${c.id}`;
+    const dueLabel = c.due_at ? formatCommitmentDue(c.due_at, now) : "";
+
+    return `
+      <div style="display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; background: ${isOverdue ? "#fef2f2" : "#fffbeb"}; border-radius: 8px; margin-bottom: 6px; ${isOverdue ? "border-left: 3px solid #ef4444;" : "border-left: 3px solid #f59e0b;"}">
+        <span style="font-size: 14px; line-height: 20px;">${icon}</span>
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-size: 14px; font-weight: 600; color: #111;">${escapeHtml(c.title)}</div>
+          ${c.description ? `<div style="font-size: 12px; color: #6b7280; margin-top: 2px;">${escapeHtml(c.description)}</div>` : ""}
+          <div style="font-size: 11px; color: ${isOverdue ? "#dc2626" : "#92400e"}; margin-top: 4px;">
+            ${dueLabel}${c.to_name ? ` → ${escapeHtml(c.to_name)}` : ""}
+          </div>
+        </div>
+        <a href="${doneUrl}" style="display: inline-block; background: #10b981; color: #fff; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 600; white-space: nowrap;" target="_blank">✓ Done</a>
+      </div>`;
+  }).join("");
+
+  return `
+    <div style="margin-bottom: 20px; padding: 16px; background: #fffbeb; border-radius: 12px; border: 1px solid #fde68a;">
+      <div style="font-size: 15px; font-weight: 700; color: #111; margin-bottom: 10px;">
+        ⚡ ${sectionTitle} (${relevantCommitments.length})
+      </div>
+      ${commitmentCards}
+    </div>`;
+}
+
+function formatCommitmentDue(due: string, now: Date): string {
+  const d = new Date(due);
+  const diffMs = d.getTime() - now.getTime();
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffDays < -1) return `${Math.abs(diffDays)} days overdue`;
+  if (diffDays === -1) return "Yesterday";
+  if (diffDays === 0) {
+    return `Today ${d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`;
+  }
+  if (diffDays === 1) return `Tomorrow ${d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`;
+  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
 function escapeHtml(str: string): string {
