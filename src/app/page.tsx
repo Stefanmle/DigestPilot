@@ -23,13 +23,19 @@ export default function LandingPage() {
 
   useEffect(() => {
     const supabase = getSupabase();
-    supabase.auth.onAuthStateChange((event, session) => {
+    supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN" && session?.user?.email) {
-        if (isAllowedEmail(session.user.email)) {
-          window.location.href = "/onboarding";
-        } else {
+        if (!isAllowedEmail(session.user.email)) {
           window.location.href = "/request-access";
+          return;
         }
+        // Check if user has an inbox connected → dashboard, otherwise → onboarding
+        const { count } = await supabase
+          .from("inboxes")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", session.user.id)
+          .eq("is_active", true);
+        window.location.href = count && count > 0 ? "/dashboard" : "/onboarding";
       }
     });
     supabase.auth.getUser().then(({ data: { user } }) => {
