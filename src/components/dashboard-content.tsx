@@ -68,14 +68,20 @@ export function DashboardContent({
 
         if (digest?.status === "processing" || digest?.status === "queued") {
           // Show live email count
-          const { count } = await supabase
-            .from("digest_emails")
-            .select("*", { count: "exact", head: true })
-            .eq("digest_id", digestId);
-          if (count && count > 0) {
-            setDigestStatus(`AI is reading and summarizing... ${count} email${count !== 1 ? "s" : ""} processed`);
-          } else if (digest?.status === "processing") {
-            setDigestStatus("AI is reading and summarizing...");
+          try {
+            const { count } = await supabase
+              .from("digest_emails")
+              .select("*", { count: "exact", head: true })
+              .eq("digest_id", digestId);
+            if (count && count > 0) {
+              setDigestStatus(`AI is reading and summarizing... ${count} email${count !== 1 ? "s" : ""} processed`);
+            } else if (digest?.status === "processing") {
+              setDigestStatus("AI is reading and summarizing...");
+            } else {
+              setDigestStatus("Connecting to your inbox...");
+            }
+          } catch {
+            setDigestStatus(digest?.status === "processing" ? "AI is reading and summarizing..." : "Connecting to your inbox...");
           }
         } else if (digest?.status === "completed") {
           clearInterval(pollInterval);
